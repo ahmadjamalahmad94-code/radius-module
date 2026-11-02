@@ -157,7 +157,9 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     function openQuickModal() {
       syncQuickAccountingMode();
       quickModal.hidden = false;
-      var first = quickModal.querySelector("input, select, button, a");
+      // أوّلُ حقلٍ في النموذج لا زرُّ الإغلاق الذي يسبقه في الرأس.
+      var first = quickModal.querySelector("form input:not([type=hidden]), form select")
+        || quickModal.querySelector("input, select, button, a");
       if (first && first.focus) first.focus();
     }
     if (accountingMode) {
@@ -177,6 +179,8 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && !quickModal.hidden) closeQuickModal();
     });
+    // ‎?new=1‎ — روابطُ بقيّة اللوحة إلى «إنشاء حزمة» تصل هنا مفتوحة.
+    if (quickModal.hasAttribute("data-open-on-load")) openQuickModal();
   }
 
   function normalizeCellValue(value, type) {

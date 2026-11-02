@@ -198,8 +198,18 @@
   {% include "_partials/hr_i18n_js.html" %}
   <script src="{{ url_for('static', filename='js/hr_ajax_errors.js', v=asset_v('js/hr_ajax_errors.js') if asset_v is defined else None) }}"></script>
   {% block head_extra %}{% endblock %}
+  {% if hr_embed is defined and hr_embed %}
+  {# الوضع المدمج: الصفحةُ داخل نافذةٍ في صفحةٍ أخرى (فحصُ البطاقة داخل «حزم
+     البطاقات» — طلب المالك 2026-11-02). نفس الصفحة وأصولها، بلا إطار اللوحة. #}
+  <style>
+    body.hb-embed .topbar, body.hb-embed .hb-side, body.hb-embed .hb-bg-net,
+    body.hb-embed .app-footer, body.hb-embed .mt-warn-banner{ display:none !important; }
+    body.hb-embed .main{ margin:0 !important; min-height:0; padding:12px 14px 18px; }
+    @media (max-width: 480px){ body.hb-embed .main{ padding:8px 8px 14px; } }
+  </style>
+  {% endif %}
 </head>
-<body>
+<body{% if hr_embed is defined and hr_embed %} class="hb-embed"{% endif %}>
 
 {# Decorative network background — animated WiFi pulse rings + pulsing
    network nodes + drifting "data packets". Pure CSS animations, sits

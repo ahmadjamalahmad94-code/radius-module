@@ -6,6 +6,10 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
 
   const PAGE_URL = '/admin/radius/cards/checker';
   const API_URL = '/admin/radius/cards/checker/api/lookup';
+  // داخل نافذة «حزم البطاقات» (‎embed=1‎): يبقى كلُّ بحثٍ وعمليّةٍ مدمجًا.
+  // يُقرأ في init() — السكربتُ قد يُحمَّل قبل أن يوجد <body>.
+  let EMBEDDED = false;
+  let EMBED_QS = '';
   const LIVE_POLL_MS = 10000;
   const FADE_IN_MS = 220;
 
@@ -17,6 +21,8 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
+    EMBEDDED = document.body.classList.contains('hb-embed');
+    EMBED_QS = EMBEDDED ? '&embed=1' : '';
     const form = $('#cc-search-form');
     if (!form) return;
 
@@ -24,7 +30,45 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     window.addEventListener('popstate', onPopState);
     wireSectionToggles();
     wireModeToggle();
+    if (EMBEDDED) wireEmbedded();
     maybeStartLivePoll();
+  }
+
+  // النافذةُ المدمجة: عمليّاتُ البطاقة ترجع إليها لا إلى الصفحة الكاملة، وأيُّ
+  // رابطٍ يغادر الفاحصَ (الحزمة، صفحة العميل…) يُفتح في الصفحة الأمّ.
+  function wireEmbedded() {
+    document.addEventListener('submit', (e) => {
+      const f = e.target;
+      if (!(f instanceof HTMLFormElement) || f.id === 'cc-search-form') return;
+      if (f.querySelector('input[name="embed"]')) return;
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden'; hidden.name = 'embed'; hidden.value = '1';
+      f.appendChild(hidden);
+    }, true);
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href]');
+      if (!a || a.target) return;
+      let url;
+      try { url = new URL(a.href, window.location.href); } catch (_e) { return; }
+      if (url.origin === window.location.origin && url.pathname === PAGE_URL) {
+        if (url.searchParams.get('embed') !== '1') {
+          url.searchParams.set('embed', '1');
+          a.href = url.toString();
+        }
+        return;
+      }
+      a.target = '_top';
+    }, true);
+    // Esc داخل الإطار لا يصل الصفحةَ الأمّ — نُبلغها لتُغلق النافذة.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      // Esc يُغلق أوّلًا أيَّ تأكيدٍ مفتوحٍ داخل الفاحص، لا النافذةَ كلَّها.
+      const inner = Array.prototype.some.call(
+        document.querySelectorAll('.cfm-ov, [role="dialog"]'),
+        (el) => getComputedStyle(el).display !== 'none' && !el.hidden);
+      if (inner) return;
+      try { window.parent.postMessage({ hr: 'checker-close' }, window.location.origin); } catch (_e) {}
+    });
   }
 
   // R13.A.7: advanced / simple mode switcher. Persists in localStorage
@@ -51,13 +95,15 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
         label.textContent =
           mode === 'simple' ? hrT('المستوى البسيط') : hrT('المستوى المتقدّم');
       }
-      try { localStorage.setItem(MODE_KEY, mode); } catch (_e) {}
+      // تفضيلُ الصفحة الكاملة لا تمسّه النافذة.
+      if (!EMBEDDED) { try { localStorage.setItem(MODE_KEY, mode); } catch (_e) {} }
     }
 
-    // initial — honor saved preference, default to advanced
+    // initial — honor saved preference, default to advanced. داخل النافذة
+    // يبدأ «بسيطًا» دائمًا، والمتقدّمُ بضغطة (طلب المالك 2026-11-02).
     let saved = 'advanced';
     try { saved = localStorage.getItem(MODE_KEY) || 'advanced'; } catch (_e) {}
-    apply(saved);
+    apply(EMBEDDED ? 'simple' : saved);
 
     // event delegation so AJAX-swapped result panels still find handlers
     document.addEventListener('click', (e) => {
@@ -104,7 +150,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     if (!resultEl) return;
     resultEl.classList.add('cc-loading');
 
-    const url = PAGE_URL + '?query=' + encodeURIComponent(query);
+    const url = PAGE_URL + '?query=' + encodeURIComponent(query) + EMBED_QS;
     if (pushHistory) {
       window.history.pushState({ query }, '', url);
     }

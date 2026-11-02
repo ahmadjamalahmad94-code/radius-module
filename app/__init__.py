@@ -115,6 +115,10 @@ def create_app() -> Flask:
     _install_captive_redirect(app)
     _install_cli(app)
     _install_mt_health_context(app)
+    # البطاقاتُ الإلكترونيّة وسوقُها مخفيّةٌ إلّا لزبونٍ فُعِّلت له (قرار المالك
+    # 2026-11-02). الترخيصُ للسيرفر، فإن لم يُحَلّ المستأجرُ بعدُ قُرئ عقدُ الأوّل.
+    from app.radius.services import ecards_gate
+    ecards_gate.install(app)
     with boot_lock():
         _seed_demo(app)
     # يُشغَّل بعد بذر التجريبيّة عمدًا: في وضع التجربة تكون البيانات (والمدير

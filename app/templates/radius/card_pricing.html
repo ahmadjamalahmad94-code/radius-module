@@ -36,7 +36,7 @@
   subtitle=_('ضبط سياسة سعر البيع والجملة وحدود الخصم للباقات، ثم تسجيل تكلفة الحزمة عند تحميلها على مدير. هنا لا يتم توليد الكروت ولا يطبَّق شيء مباشر على خدمة المصادقة.'),
   icon="tags",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.cards_generate') + '">
+    <a class="hub-btn hub-btn--primary" href="'|safe + (url_for('radius.cards_batches', new='1') if can_submit('radius.cards_batches', 'GET') else url_for('radius.cards_generate')) + '">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("إنشاء حزمة") ~ '
     </a>
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">

@@ -92,8 +92,15 @@ def register_cards_routes(bp: Blueprint) -> None:
 
 
 def cards_overview():
-    """Lightweight cards overview: fast read-only snapshot."""
+    """Lightweight cards overview: fast read-only snapshot.
+
+    ‎?fragment=1‎ يُعيد الأقسامَ وحدها بلا إطار — تُحمَّل أسفلَ صفحة الحزم
+    (طلب المالك 2026-11-02). نفسُ نقطة النهاية عمدًا: صلاحيّاتُها وبوّابةُ
+    المزوّد تسري على الجزء كما تسري على الصفحة، بلا خريطةٍ ثانيةٍ تُنسى.
+    """
     overview = _cards_overview_snapshot(_tid())
+    if request.args.get("fragment") == "1":
+        return render_template("radius/_cards_overview_fragment.html", **overview)
     return render_template("radius/cards_overview.html", **overview)
 
 
@@ -909,6 +916,12 @@ def _collect_batch_options() -> dict:
     batch_type = _form_str("batch_type") or "printed"
     if batch_type not in {"printed", "electronic"}:
         batch_type = "printed"
+    # «إلكترونيّة» لزبونٍ فُعِّل له سوقُ البطاقات فقط — النموذجُ لا يعرضها لغيره،
+    # وهذا يمنع إرسالها يدويًّا (المالك 2026-11-02).
+    if batch_type == "electronic":
+        from ..services.ecards_gate import ecards_enabled
+        if not ecards_enabled(_tid()):
+            batch_type = "printed"
     quota_value = _form_int("quick_quota_value")
     quota_unit = (_form_str("quick_quota_unit") or "mb").lower()
     total_quota_mb = _form_int("total_quota_mb")
@@ -1198,6 +1211,10 @@ def cards_batches():
         can_import=_can_import_batches(),
         print_templates=print_templates,
         default_print_template_id=default_print_template_id,
+        # نافذة «إنشاء حزمة» — نفس نموذج /cards/generate كاملًا (طلب المالك
+        # 2026-11-02). ‎?new=1‎ يفتحها عند التحميل لروابط بقيّة اللوحة.
+        gen=_generate_form_context(),
+        open_generate=request.args.get("new") == "1",
         totals=totals,
         filters=filters,
         page=page,
@@ -1694,8 +1711,15 @@ def _identity_flash(res: dict) -> str:
     return msg
 
 
+def _checker_embedded() -> bool:
+    """الفاحصُ مفتوحٌ داخل نافذة «حزم البطاقات» (‎embed=1‎) لا صفحةً كاملة."""
+    return (request.values.get("embed") or "") == "1"
+
+
 def _checker_redirect(query: str):
-    return redirect(url_for("radius.cards_checker", query=(query or "").strip()))
+    # بعد أيّ عمليّةٍ يبقى الفاحصُ داخل نافذته إن جاء منها، لا يقفز بإطار اللوحة.
+    extra = {"embed": "1"} if _checker_embedded() else {}
+    return redirect(url_for("radius.cards_checker", query=(query or "").strip(), **extra))
 
 
 def _handle_card_operation():
@@ -1972,6 +1996,7 @@ def cards_checker():
         query=query,
         result=result,
         error=error,
+        hr_embed=_checker_embedded(),
     )
 
 
@@ -2101,8 +2126,6 @@ def cards_checker_api_reveal_password():
 
 
 def cards_generate():
-    _super = is_super_admin()
-    _me = current_admin_id()
     # ── حارس الدور (خادميّ) ──
     # النموذج الكامل (نوع/خطّة/كوتا/صلاحية/أسعار يدويّة) مقصورٌ على المالك.
     # المدير الفرعيّ لا يُحدِّد المواصفات أو الأسعار إطلاقًا — يولّد فقط من عرضٍ
@@ -2152,25 +2175,31 @@ def cards_generate():
             flash(e.message, "error")
         except (TypeError, ValueError) as e:
             flash(_tr('قيم غير صحيحة: %(e)s', e=e), "error")
+    return render_template("radius/cards_generate.html", **_generate_form_context())
+
+
+def _generate_form_context() -> dict:
+    """سياقُ نموذج «إنشاء حزمة» — يشترك فيه المسار المستقلّ ونافذةُ صفحة الحزم.
+
+    طلب المالك 2026-11-02: الإنشاءُ نافذةٌ داخل «حزم البطاقات» لا صفحةٌ
+    منفصلة، بنفس الخيارات كلّها. فالسياقُ يُبنى هنا مرّةً ويُعرض في المكانين.
+    """
+    _me = current_admin_id()
     # ── المدير الفرعيّ: عارض العروض بدل النموذج الكامل ──
     # يَختار عرضًا جاهزًا (خطّته/سرعته/صلاحيته/سعره مقفلة من المالك) + الكمية +
     # موزّعَه (للمحاسبة)، ثم يُولّد عبر cards_offer_use الذي يَخصم الجملة من
     # محفظته ضمن حدّ الدَّيْن. لا حقل سعر/صلاحية/مواصفة قابل للتحرير له.
     # MT111 — والمأذون له بـ«إنشاء دفعة بطاقات» يرى النموذج الكامل كالمالك،
     # وإلّا لبقي العطب: يُقبل POST منه ثمّ لا يجد نموذجًا يُرسله.
-    if not _may_generate:
-        offers = _offers_service().list_offers(admin_id=_me, is_super=False)
-        distributors = operations_repo.list_distributors(_tid(), admin_id=_me, limit=500)
+    if not _can_generate_batches():
         # ملخّصات الخطط (سرعة/كوتا/مدّة) لكل عرض — لعرض كل سمات العرض المقفلة
         # في بطاقات الملخّص (الكوتا/السرعة تأتيان من خطّة العرض).
-        plan_summaries = {p.id: _plan_summary(p) for p in get_plans_service().list(limit=500)}
-        return render_template(
-            "radius/cards_generate.html",
+        return dict(
             manager_mode=True,
             is_super=False,
-            offers=offers,
-            distributors=distributors,
-            plan_summaries=plan_summaries,
+            offers=_offers_service().list_offers(admin_id=_me, is_super=False),
+            distributors=operations_repo.list_distributors(_tid(), admin_id=_me, limit=500),
+            plan_summaries={p.id: _plan_summary(p) for p in get_plans_service().list(limit=500)},
             current_manager_id=_me,
             currency=default_currency(),
             form=request.form,
@@ -2179,17 +2208,13 @@ def cards_generate():
             username_length_max=_username_length_max(),
         )
 
-    plans = list(get_plans_service().list(limit=500))
     # المالك: النموذج الكامل — كل المدراء وكل الموزّعين (تصفية الموزّع بالـJS).
-    managers = admins_repo.list_admins()
-    distributors = operations_repo.list_distributors(_tid(), limit=500)
-    return render_template(
-        "radius/cards_generate.html",
+    return dict(
         manager_mode=False,
-        plans=plans,
-        managers=managers,
-        distributors=distributors,
-        is_super=_super,
+        plans=list(get_plans_service().list(limit=500)),
+        managers=admins_repo.list_admins(),
+        distributors=operations_repo.list_distributors(_tid(), limit=500),
+        is_super=is_super_admin(),
         current_manager_id=_me,
         form=request.form,
         lwp_default=_network_cards_passwordless_default(),

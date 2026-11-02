@@ -1,0 +1,120 @@
+{# أنماط نموذج «إنشاء حزمة» — مشتركة بين /cards/generate ونافذة صفحة الحزم. #}
+<style>
+  .cg-form{ max-width: 1180px; margin: 0 auto; }
+
+  /* Collapsible section cards (hub-token driven) */
+  .cg-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+    scroll-margin-top: 96px;
+  }
+  .cg-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .cg-section.is-collapsible .cg-section-head{ cursor:pointer; user-select:none; }
+  .cg-section.is-collapsed .cg-section-head{ border-bottom: none; }
+  .cg-section-icon{
+    width:30px; height:30px;
+    border-radius: var(--hub-r-md);
+    display: inline-flex; align-items:center; justify-content:center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .cg-section-title{ flex:1; font-size: 14px; font-weight: 800; color: var(--hub-text); }
+  .cg-section-toggle{
+    color: var(--hub-text-mute);
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .cg-section.is-collapsed .cg-section-toggle{ transform: rotate(-90deg); }
+  .cg-section-body{ padding: 18px; }
+  .cg-section.is-collapsed .cg-section-body{ display:none; }
+
+  .cg-section--batch  { border-inline-start: 3px solid var(--hub-brand); }
+  .cg-section--batch  .cg-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
+  .cg-section--gen    { border-inline-start: 3px solid var(--hub-green); }
+  .cg-section--gen    .cg-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .cg-section--time   { border-inline-start: 3px solid var(--hub-amber); }
+  .cg-section--time   .cg-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .cg-section--speed  { border-inline-start: 3px solid #8B5CF6; }
+  .cg-section--speed  .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
+  .cg-section--behave { border-inline-start: 3px solid #8B5CF6; }
+  .cg-section--behave .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
+
+  /* Grid + fields */
+  .cg-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width:920px){ .cg-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:560px){ .cg-grid{ grid-template-columns: 1fr; } }
+  .cg-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .cg-field.full{ grid-column: 1 / -1; }
+  .cg-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .cg-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .cg-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+
+  .cg-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px;
+    min-height:45px;
+    background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft);
+    border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700; color:var(--hub-text);
+  }
+  .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+
+  /* لوحة الإجماليّات وهامش الربح — عرض للقراءة فقط (مرجعيّ) بتباعد سخيّ */
+  .cg-calc{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px; margin-top:6px;
+  }
+  .cg-calc-item{
+    display:flex; flex-direction:column; gap:6px;
+    padding:14px 16px;
+    border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft);
+  }
+  .cg-calc-item--margin{
+    border-color:var(--hub-brand-line);
+    background:var(--hub-brand-soft);
+  }
+  .cg-calc-k{ font-size:12px; font-weight:800; color:var(--hub-text-soft); display:flex; align-items:center; gap:6px; }
+  .cg-calc-v{ font-size:20px; font-weight:900; color:var(--hub-text); font-variant-numeric:tabular-nums; }
+  .cg-calc-item--margin .cg-calc-v{ color:var(--hub-brand-ink); }
+  /* رأس ملخّص العرض المقفل + شارات القفل الصغيرة على كل بطاقة */
+  .cg-locked-head{ display:flex; align-items:center; gap:8px; margin:18px 0 8px;
+    font-size:12.5px; font-weight:900; color:var(--hub-brand-ink); }
+  .cg-lk{ font-size:10px; color:var(--hub-text-mute); }
+
+  /* معاينة اسم المستخدم: البادئة | المولَّد | اللاحقة بألوانٍ مميّزة */
+  .cg-unprev{ display:flex; flex-direction:column; gap:8px; padding:12px 14px;
+    border:1px dashed var(--hub-brand-line); border-radius:var(--hub-r-md); background:var(--hub-bg-soft); }
+  .cg-unprev-name{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:20px; font-weight:800;
+    letter-spacing:.5px; text-align:left; unicode-bidi:isolate; word-break:break-all; }
+  .cg-unprev-pre, .cg-dot--pre{ color:#7C3AED; }
+  .cg-unprev-gen, .cg-dot--gen{ color:var(--hub-text); }
+  .cg-unprev-suf, .cg-dot--suf{ color:#0E7490; }
+  .cg-unprev-bn, .cg-dot--bn{ color:#C2410C; }
+  .cg-unprev-bn{ text-decoration:underline dotted; text-underline-offset:4px; }
+  .cg-unprev-pre, .cg-unprev-suf{ text-decoration:underline; text-underline-offset:4px; }
+  .cg-unprev-legend{ display:flex; flex-wrap:wrap; gap:14px; font-size:12px; font-weight:700; color:var(--hub-text-soft); }
+  .cg-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-inline-end:5px; }
+  .cg-unprev-warn{ color:#B45309; font-weight:700; }
+
+  .cg-speed-note{
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:14px;
+    padding:10px 12px;
+    border:1px dashed var(--hub-brand-line);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-brand-soft);
+    color:var(--hub-brand-ink);
+    font-size:12px; font-weight:800; line-height:1.6;
+  }
+</style>

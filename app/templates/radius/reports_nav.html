@@ -67,8 +67,11 @@
 {% set jump_items = [] %}
 {% for g in GROUPS if g.key == ns.active %}
   {% for r in g.reports %}
+    {#- تقريرُ سوق البطاقات لا يُعرض إلّا لزبونٍ فُعِّل له السوق (ecards_gate). -#}
+    {% if r.ep != 'radius.rep_card_store_events' or (ecards_enabled is defined and ecards_enabled()) %}
     {% set _u = url_for(r.ep) %}
     {% if jump_items.append({'label': r.label, 'url': _u, 'current': _u == p}) %}{% endif %}
+    {% endif %}
   {% endfor %}
 {% endfor %}
 {% set jump_testid = 'reports-nav' %}

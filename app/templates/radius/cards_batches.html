@@ -23,6 +23,43 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 <script defer src="{{ url_for('static', filename='js/cards_generate_progress.js', v='f2l3') }}"></script>
+{% include "radius/_cards_generate_styles.html" %}
+{# أنماط «النظرة العامة» أسفل الصفحة — كلُّها محصورةٌ في .cards-overview / .co-*. #}
+{% include "radius/_cards_overview_styles.html" %}
+<style>
+  .batches-overview{ margin-top: 22px; }
+  .batches-overview__head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin: 0 2px 12px; }
+  .batches-overview__head h2{ margin:0; font-size:17px; font-weight:900; color: var(--hub-text, #0f172a); }
+  .batches-overview__head h2 i{ color: var(--hub-brand, #2BAACC); margin-inline-end:6px; }
+  .batches-overview__head p{ margin:0; font-size:12.5px; color: var(--hub-text-mute, #64748b); }
+  .batches-overview__status{ padding: 18px; text-align:center; color: var(--hub-text-mute, #64748b);
+    border:1px dashed var(--hub-border, #e2e8f0); border-radius: var(--hub-r-card, 14px); background:#fff; }
+</style>
+<style>
+  /* نافذة «إنشاء حزمة» بالنموذج الكامل: أعرض من المختصرة، والرأسُ ثابتٌ فوق
+     الأقسام حين تُمرَّر. */
+  .quick-batch-modal--full .quick-batch-modal__panel{
+    width: min(1080px, 100%);
+    max-height: calc(100vh - 44px);
+  }
+  .quick-batch-modal--full .quick-batch-modal__header{
+    position: sticky; top: 0; z-index: 3;
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .quick-batch-modal__body{
+    padding: 16px 18px 18px;
+    background: var(--hub-bg-soft, #f8fafc);
+  }
+  .cg-form--embed{ max-width: none; }
+  /* على الجوّال تملأ النافذةُ الشاشة — الهوامشُ تأكل عرضًا لا يملكه الهاتف. */
+  @media (max-width: 720px){
+    .quick-batch-modal--full{ padding: 0; }
+    .quick-batch-modal--full .quick-batch-modal__panel{
+      width: 100%; height: 100%; max-height: none; border-radius: 0;
+    }
+    .quick-batch-modal--full .quick-batch-modal__body{ padding: 10px; }
+  }
+</style>
 <style>
   /* #17: bring the «إضافة حزمة سريعة» quick-batch modal in line with the
      app design system (Cairo, --hub-* tokens, consistent inputs / spacing /
@@ -289,8 +326,13 @@
     </div>
     <div class="batches-hero__actions">
       <button class="batch-btn batch-btn--primary" type="button" data-quick-batch-open>
-        <i class="fa-solid fa-plus"></i> {{ _('حزمة جديدة') }}
+        <i class="fa-solid fa-plus"></i> {{ _('إنشاء حزمة') }}
       </button>
+      {% if can_submit('radius.cards_checker', 'GET') %}
+      <button class="batch-btn batch-btn--soft" type="button" data-checker-open>
+        <i class="fa-solid fa-magnifying-glass"></i> {{ _('فحص بطاقة') }}
+      </button>
+      {% endif %}
       {% if can_import %}
       {% if can_submit('radius.cards_batches_import', 'GET') %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">
         <i class="fa-solid fa-file-import"></i> {{ _('استيراد من ملف') }}
@@ -827,184 +869,153 @@
         {{ hub.empty(_('لا توجد حزم مطابقة للفلاتر الحالية'), sub=_('جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.'), icon="layer-group") }}
       {% endif %}
   </section>
+
+  {# «النظرة العامة» أسفلَ الحزم — طلب المالك 2026-11-02 (على نسق ADV: الإحصاءُ
+     تحت القائمة لا صفحةً مستقلّة). نفسُ أقسام /cards/overview (المبيعات بفتراتها ·
+     التنبيهات · المخزون) تُجلب بعد فتح الصفحة حين يقترب المشغّلُ منها، فلا تُبطئ
+     قائمةَ الحزم نفسَها. #}
+  {% if can_submit('radius.cards_overview', 'GET') %}
+  <section class="batches-overview" aria-labelledby="batchesOverviewTitle" aria-busy="true"
+           data-overview-src="{{ url_for('radius.cards_overview', fragment='1') }}">
+    <header class="batches-overview__head">
+      <h2 id="batchesOverviewTitle"><i class="fa-solid fa-chart-pie"></i> {{ _('نظرة عامة') }}</h2>
+      <p>{{ _('مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم.') }}</p>
+    </header>
+    <div class="batches-overview__body" data-overview-body>
+      <p class="batches-overview__status" data-overview-status>
+        <i class="fa-solid fa-spinner fa-spin"></i> {{ _('جارٍ تحميل النظرة العامة…') }}
+      </p>
+    </div>
+  </section>
+  {% endif %}
 </section>
 
-<div class="quick-batch-modal" data-quick-batch-modal hidden>
+{# نافذة «إنشاء حزمة» — طلب المالك 2026-11-02: الإنشاءُ من داخل صفحة الحزم بنفس
+   خيارات الصفحة الأساسيّة كلّها، لا صفحةً منفصلة. النموذجُ نفسُه المستعمل في
+   /cards/generate (الأجزاء radius/_cards_generate_*.html) والسياقُ من
+   routes/cards.py::_generate_form_context، فلا يفترق المكانان أبدًا.
+   ‎with‎ يحجب متغيّراتِ الصفحة (موزّعو الفلتر كلّهم) عن النموذج (موزّعو المدير). #}
+<div class="quick-batch-modal quick-batch-modal--full" data-quick-batch-modal hidden
+     {% if open_generate %}data-open-on-load{% endif %}>
   <div class="quick-batch-modal__backdrop" data-quick-batch-close></div>
   <section class="quick-batch-modal__panel" role="dialog" aria-modal="true" aria-labelledby="quickBatchTitle">
     <header class="quick-batch-modal__header">
       <div>
-        <h2 id="quickBatchTitle">{{ _('إضافة حزمة سريعة') }}</h2>
-        <p>{{ _('الأساسيات فقط. للإعدادات الكاملة استخدم الوضع المتقدم.') }}</p>
+        <h2 id="quickBatchTitle">{{ _('إنشاء حزمة بطاقات') }}</h2>
+        <p>{{ _('الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.') }}</p>
       </div>
       <button type="button" class="quick-batch-modal__close" data-quick-batch-close aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </header>
-    <form method="post" action="{{ url_for('radius.cards_generate') }}" class="quick-batch-form"
-          data-card-generate-form
-          data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
-          data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">{% if not can_submit('radius.cards_generate') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
-      <input type="hidden" name="random_generation_enabled" value="1">
-      <input type="hidden" name="count_from_first_connect" value="1" data-quick-count-from-first>
-      <input type="hidden" name="count_by_seconds" value="" data-quick-count-by-seconds>
-      <input type="hidden" name="total_quota_mb" value="0" data-quick-quota-mb>
-      <input type="hidden" name="validity_after_first_login_days" value="" data-quick-validity-days>
-      <div class="quick-batch-type">
-        <label>
-          <input type="radio" name="batch_type" value="printed" checked>
-          <span><i class="fa-solid fa-print"></i> {{ _('مطبوعة') }}</span>
-        </label>
-        <label>
-          <input type="radio" name="batch_type" value="electronic">
-          <span><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }}</span>
-        </label>
+    <div class="quick-batch-modal__body">
+      {% with cg_embed=True,
+              manager_mode=gen.manager_mode,
+              plans=gen.get('plans'),
+              managers=gen.get('managers'),
+              distributors=gen.distributors,
+              is_super=gen.is_super,
+              offers=gen.get('offers'),
+              plan_summaries=gen.get('plan_summaries'),
+              currency=gen.get('currency'),
+              current_manager_id=gen.current_manager_id,
+              form=gen.form,
+              lwp_default=gen.lwp_default,
+              max_per_batch=gen.max_per_batch,
+              request_key=gen.get('request_key'),
+              speed_rules_panel=gen.get('speed_rules_panel'),
+              next_batch_id=gen.get('next_batch_id'),
+              username_length_max=gen.username_length_max %}
+      <div class="cg-form cg-form--embed">
+        {% if manager_mode %}
+          {% include "radius/_cards_generate_mgr_form.html" %}
+        {% else %}
+          {% include "radius/_cards_generate_owner_form.html" %}
+        {% endif %}
       </div>
-      <div class="quick-batch-grid">
-        <label>
-          <span>{{ _('اسم الحزمة') }}</span>
-          <input class="hub-input" name="package_name" placeholder="{{ _('مثال: حزمة ساعة') }}">
-        </label>
-        <label>
-          <span>{{ _('العرض') }}</span>
-          <select class="hub-select" name="plan_id" required>
-            <option value="">{{ _('اختر العرض') }}</option>
-            {% for p in plans %}
-              <option value="{{ p.id }}">{{ p.name }} · {{ p.price|money }}</option>
-            {% endfor %}
-          </select>
-        </label>
-      </div>
-      <div class="quick-batch-grid quick-batch-grid--three">
-        <label>
-          <span>{{ _('مدة الاستخدام') }}</span>
-          <input class="hub-input" type="number" name="time_value" min="0" value="0">
-        </label>
-        <label>
-          <span>{{ _('وحدة الاستخدام') }}</span>
-          <select class="hub-select" name="time_unit">
-            <option value="minutes">{{ _('دقيقة') }}</option>
-            <option value="hours">{{ _('ساعة') }}</option>
-            <option value="days" selected>{{ _('يوم') }}</option>
-          </select>
-        </label>
-        <label>
-          <span>{{ _('نوع المحاسبة') }}</span>
-          <select class="hub-select" name="quick_accounting_mode" data-quick-accounting-mode>
-            <option value="first_connect" selected>{{ _('من أول اتصال') }}</option>
-            <option value="seconds">{{ _('بالثانية') }}</option>
-          </select>
-        </label>
-      </div>
-      <label class="quick-validity-field" data-quick-validity-field hidden>
-        <span>{{ _('صلاحية البطاقة بعد أول اتصال') }} <small>{{ _('مطلوبة عند المحاسبة بالثانية') }}</small></span>
-        <div class="quick-unit-control">
-          <input class="hub-input" type="number" min="1" name="quick_validity_value" value="" placeholder="{{ _('مثال: 1') }}" data-quick-validity-value disabled>
-          <select class="hub-select" name="quick_validity_unit" data-quick-validity-unit disabled>
-            <option value="minutes">{{ _('دقيقة') }}</option>
-            <option value="hours">{{ _('ساعة') }}</option>
-            <option value="days" selected>{{ _('يوم') }}</option>
-          </select>
-        </div>
-      </label>
-      <div class="quick-batch-grid quick-batch-grid--five">
-        <label>
-          <span>{{ _('الكمية') }}</span>
-          <input class="hub-input" type="number" name="count" min="1" {% if max_per_batch %}max="{{ max_per_batch }}"{% endif %} value="20" required>
-        </label>
-        <label>
-          <span>{{ _('سعر البيع') }}</span>
-          <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="0">
-        </label>
-        <label>
-          <span>{{ _('سعر الجملة') }}</span>
-          <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk" value="0">
-        </label>
-        <label>
-          <span>{{ _('الكوتة') }}</span>
-          <div class="quick-unit-control">
-            <input class="hub-input" type="number" min="0" name="quick_quota_value" value="0" data-quick-quota-value>
-            <select class="hub-select" name="quick_quota_unit" data-quick-quota-unit>
-              <option value="mb" selected>{{ _('ميجا') }}</option>
-              <option value="gb">{{ _('جيجا') }}</option>
-            </select>
-          </div>
-        </label>
-        <label>
-          <span>{{ _('عدد الأجهزة') }}</span>
-          <input class="hub-input" type="number" name="device_count" min="1" max="50" value="1">
-        </label>
-      </div>
-      <div class="quick-batch-grid quick-batch-grid--four">
-        <label>
-          <span>{{ _('طول اسم المستخدم') }}</span>
-          <input class="hub-input" type="number" name="username_length" min="4" max="{{ hr_limits.card_username_len_max }}" value="{{ hr_limits.card_default_username_length }}" data-qun-length>
-        </label>
-        <label>
-          <span>{{ _('طول كلمة المرور') }}</span>
-          <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="{{ hr_limits.card_default_password_length }}">
-        </label>
-        {# MT88 — نمط توليد كلمة المرور كان في الوضع المتقدّم وحده، فكلّ حزمةٍ
-           تُنشأ من هنا تسقط على الافتراضيّ «متوسط» بلا أن يُسأل المشغّل. نفس
-           الاسم والقيم المستعملة في cards_generate.html كي يقرأها المسار
-           بلا تفريع. #}
-        <label>
-          <span>{{ _('نمط كلمة المرور') }}</span>
-          <select class="hub-select" name="password_generation_type">
-            <option value="digits" selected>{{ _('أرقام فقط') }}</option>
-            <option value="medium">{{ _('متوسط (حروف وأرقام)') }}</option>
-            <option value="weak">{{ _('حروف فقط') }}</option>
-            <option value="strong">{{ _('قوي (حروف كبيرة وصغيرة وأرقام)') }}</option>
-          </select>
-        </label>
-      </div>
-      {# بادئة/لاحقة اسم المستخدم — حقلان صريحان + معاينة (مثل cards_generate.html). #}
-      <div class="quick-batch-grid">
-        <label>
-          <span>{{ _('بادئة اسم المستخدم — اختياري') }}</span>
-          <input class="hub-input" name="username_prefix" maxlength="12" dir="ltr" autocomplete="off" placeholder="{{ _('مثال: 25') }}" data-qun-prefix>
-        </label>
-        <label>
-          <span>{{ _('لاحقة اسم المستخدم — اختياري') }}</span>
-          <input class="hub-input" name="username_suffix" maxlength="12" dir="ltr" autocomplete="off" placeholder="{{ _('مثال: 99') }}" data-qun-suffix>
-        </label>
-      </div>
-      <div class="quick-unprev" aria-live="polite">
-        <span class="quick-unprev__k">{{ _('شكل اسم المستخدم:') }}</span>
-        <bdi class="quick-unprev__v" dir="ltr"><span class="quick-unprev__pre" data-qun-pv-pre></span><span data-qun-pv-gen>12345678</span><span class="quick-unprev__suf" data-qun-pv-suf></span></bdi>
-        <small class="quick-unprev__hint">{{ _('البادئة + أرقام عشوائيّة + اللاحقة، والطول أعلاه هو الطول الكلّيّ.') }}</small>
-      </div>
-      <div class="quick-batch-grid">
-        <label>
-          <span>{{ _('المدير') }}</span>
-          <select class="hub-select" name="manager_id">
-            <option value="">{{ _('اختر المدير') }}</option>
-            {% for m in managers %}
-              <option value="{{ m.id }}">{{ m.full_name or m.username }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label>
-          <span>{{ _('الموزع') }}</span>
-          <select class="hub-select" name="distributor_id">
-            <option value="">{{ _('بدون موزع') }}</option>
-            {% for d in distributors %}
-              <option value="{{ d.id }}">{{ d.display_name or d.name }}</option>
-            {% endfor %}
-          </select>
-        </label>
-      </div>
-      <footer class="quick-batch-modal__actions">
-        {% if can_submit('radius.cards_generate', 'GET') %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_generate') }}">
-          <i class="fa-solid fa-sliders"></i> {{ _('متقدم') }}
-        </a>{% endif %}
-        <button class="batch-btn batch-btn--primary" type="submit">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء الآن') }}
-        </button>
-      </footer>
-    {% if not can_submit('radius.cards_generate') %}</fieldset>{% endif %}</form>
+      {% include "radius/_cards_generate_scripts.html" %}
+      {% endwith %}
+    </div>
   </section>
 </div>
+
+{# نافذة «فحص بطاقة» — طلب المالك 2026-11-02: الفحصُ زرٌّ داخل صفحة الحزم لا
+   صفحةٌ منفصلة. الفاحصُ نفسُه (cards_checker_v2) بكلّ عمليّاته في إطارٍ مدمج
+   (‎embed=1‎: بلا قائمةٍ ولا شريط)، يبدأ «بسيطًا» والمتقدّمُ بضغطة. يُحمَّل عند
+   أوّل فتحٍ فقط. ‎?check=1[&query=…]‎ يفتحه عند التحميل. #}
+{% if can_submit('radius.cards_checker', 'GET') %}
+<div class="quick-batch-modal quick-batch-modal--checker" data-checker-modal hidden
+     data-checker-src="{{ url_for('radius.cards_checker', embed='1') }}"
+     {% if request.args.get('check') == '1' %}data-open-on-load data-checker-query="{{ request.args.get('query', '') }}"{% endif %}>
+  <div class="quick-batch-modal__backdrop" data-checker-close></div>
+  <section class="quick-batch-modal__panel" role="dialog" aria-modal="true" aria-labelledby="checkerModalTitle">
+    <header class="quick-batch-modal__header">
+      <div>
+        <h2 id="checkerModalTitle">{{ _('فحص بطاقة') }}</h2>
+        <p>{{ _('ابحث باسم الدخول أو رقم البطاقة — يظهر الملخّص البسيط، والتفاصيل المتقدّمة بضغطة.') }}</p>
+      </div>
+      <button type="button" class="quick-batch-modal__close" data-checker-close aria-label="{{ _('إغلاق') }}">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+    <iframe class="checker-frame" data-checker-frame title="{{ _('فحص بطاقة') }}"></iframe>
+  </section>
+</div>
+<style>
+  .quick-batch-modal--checker .quick-batch-modal__panel{
+    width: min(1180px, 100%);
+    height: calc(100vh - 44px);
+    max-height: none;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .checker-frame{ flex: 1; width: 100%; border: 0; background: var(--hub-bg-soft, #f8fafc); }
+  /* على الجوّال تملأ النافذةُ الشاشة — الهوامشُ تأكل عرضًا لا يملكه الهاتف. */
+  @media (max-width: 720px){
+    .quick-batch-modal--checker{ padding: 0; }
+    .quick-batch-modal--checker .quick-batch-modal__panel{
+      width: 100%; height: 100%; border-radius: 0;
+    }
+  }
+</style>
+<script>
+(function () {
+  'use strict';
+  var modal = document.querySelector('[data-checker-modal]');
+  if (!modal) return;
+  var frame = modal.querySelector('[data-checker-frame]');
+  var base = modal.getAttribute('data-checker-src');
+  function focusSearch() {
+    try {
+      var input = frame.contentDocument && frame.contentDocument.getElementById('cc-search-input');
+      if (input) { input.focus(); input.select(); }
+    } catch (_e) {}
+  }
+  function open(query) {
+    modal.hidden = false;
+    if (query) {
+      frame.src = base + '&query=' + encodeURIComponent(query);
+    } else if (!frame.getAttribute('src')) {
+      frame.src = base;
+    } else {
+      focusSearch();
+    }
+  }
+  function close() { modal.hidden = true; }
+  frame.addEventListener('load', focusSearch);
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-checker-open]')) { e.preventDefault(); open(''); return; }
+    if (e.target.closest('[data-checker-close]')) { close(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+  window.addEventListener('message', function (e) {
+    if (e.origin === window.location.origin && e.data && e.data.hr === 'checker-close') close();
+  });
+  if (modal.hasAttribute('data-open-on-load')) open(modal.getAttribute('data-checker-query') || '');
+})();
+</script>
+{% endif %}
 
 {# MT86 — «منشئ كروت PDF» عائمًا بدل نافذة «تجهيز ملف البطاقات» القديمة:
    نفس الجزء المشترك الذي تستعمله صفحة قوائم الطباعة. #}
@@ -1141,31 +1152,6 @@
   </section>
 </div>
 <script>
-(function(){
-  var len = document.querySelector('[data-qun-length]');
-  var pre = document.querySelector('[data-qun-prefix]');
-  var suf = document.querySelector('[data-qun-suffix]');
-  var oPre = document.querySelector('[data-qun-pv-pre]');
-  var oGen = document.querySelector('[data-qun-pv-gen]');
-  var oSuf = document.querySelector('[data-qun-pv-suf]');
-  if (!len || !pre || !suf || !oPre || !oGen || !oSuf) return;
-  var clean = function(v){
-    return String(v || '').replace(/\s+/g, '').replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function(d){
-      var c = d.charCodeAt(0);
-      return String.fromCharCode(48 + (c >= 0x06F0 ? c - 0x06F0 : c - 0x0660));
-    }).toLowerCase();
-  };
-  var render = function(){
-    var p = clean(pre.value), s = clean(suf.value);
-    var total = parseInt(len.value, 10);
-    if (!isFinite(total) || total <= 0) total = 8;
-    var n = Math.max(1, total - p.length - s.length), g = '';
-    while (g.length < n) g += '1234567890';
-    oPre.textContent = p; oGen.textContent = g.slice(0, n); oSuf.textContent = s;
-  };
-  [len, pre, suf].forEach(function(el){ el.addEventListener('input', render); el.addEventListener('change', render); });
-  render();
-})();
 (function () {
   var modal = document.getElementById('batchExportModal');
   if (!modal) return;
@@ -1255,6 +1241,46 @@
   });
   window.addEventListener('resize', closeMenu);
   window.addEventListener('scroll', closeMenu, true);
+})();
+
+// «النظرة العامة» أسفل الصفحة: تُجلب حين يقترب المشغّلُ منها (أو فورًا بلا
+// IntersectionObserver)، مع فترات المبيعات المختارة في عنوان الصفحة. سكربتاتُ
+// الجزء لا تعمل بـinnerHTML، فتُعاد إنشاءً لتعمل كما في الصفحة المستقلّة.
+(function () {
+  'use strict';
+  var host = document.querySelector('[data-overview-src]');
+  if (!host) return;
+  var body = host.querySelector('[data-overview-body]');
+  function load() {
+    var url = new URL(host.getAttribute('data-overview-src'), window.location.href);
+    new URL(window.location.href).searchParams.forEach(function (v, k) {
+      if (k.indexOf('sales_') === 0) url.searchParams.set(k, v);
+    });
+    fetch(url.toString(), { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (html) {
+        body.innerHTML = html;
+        body.querySelectorAll('script').forEach(function (old) {
+          var s = document.createElement('script');
+          if (old.src) { s.src = old.src; } else { s.textContent = old.textContent; }
+          old.replaceWith(s);
+        });
+        host.removeAttribute('aria-busy');
+      })
+      .catch(function () {
+        var st = body.querySelector('[data-overview-status]');
+        if (st) st.textContent = {{ _('تعذّر تحميل النظرة العامة — حدّث الصفحة.')|tojson }};
+        host.removeAttribute('aria-busy');
+      });
+  }
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      if (entries.some(function (e) { return e.isIntersecting; })) { io.disconnect(); load(); }
+    }, { rootMargin: '600px 0px' });
+    io.observe(host);
+  } else {
+    load();
+  }
 })();
 </script>
 

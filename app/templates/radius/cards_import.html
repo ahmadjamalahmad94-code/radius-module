@@ -207,7 +207,7 @@
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للحزم") ~ '
     </a>
-    <a class="hub-btn hub-btn--ghost" href="'|safe + url_for('radius.cards_generate') + '">
+    <a class="hub-btn hub-btn--ghost" href="'|safe + (url_for('radius.cards_batches', new='1') if can_submit('radius.cards_batches', 'GET') else url_for('radius.cards_generate')) + '">
       <i class="fa-solid fa-wand-magic-sparkles"></i> '|safe ~ _("إنشاء توليدي") ~ '
     </a>
   '|safe

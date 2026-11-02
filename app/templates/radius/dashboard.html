@@ -739,7 +739,7 @@
       {% if not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
       {% if can_submit('radius.users_new', 'GET') %}<a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> {{ _('مشترك جديد') }}</a>{% endif %}
       {% endif %}
-      {% if can_submit('radius.cards_generate', 'GET') %}<a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>{% endif %}
+      {% if can_submit('radius.cards_generate', 'GET') %}<a class="ops-btn ops-btn--second" href="{{ (url_for('radius.cards_batches', new='1') if can_submit('radius.cards_batches', 'GET') else url_for('radius.cards_generate')) }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>{% endif %}
       {% if can_submit('radius.setup_wizard_v3_page', 'GET') %}<a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> {{ _('تجهيز راوتر') }}</a>{% endif %}
     </div>
   </section>
@@ -795,7 +795,8 @@
     </article>
     {% endif %}
 
-    {% if _da.cards %}
+    {#- بطاقةُ «البطاقات الإلكترونيّة» لزبونٍ فُعِّل له سوقُ البطاقات فقط (ecards_gate). -#}
+    {% if _da.cards and ecards_enabled is defined and ecards_enabled() %}
     <article class="ops-module" style="--tone:#14b8a6;--soft-tone:#ecfeff;--glow:rgba(20,184,166,.12)">
       <div class="ops-module-head">
         <div>

@@ -19,7 +19,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="{{ cfg.primary_color or '#2BAACC' }}">
-  <meta name="description" content="{{ _('%(v)s — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.', v=cfg.system_name or 'HobeRadius') }}">
+  {% set _ecards = ecards_enabled is defined and ecards_enabled() %}
+  {% if _ecards %}<meta name="description" content="{{ _('%(v)s — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.', v=cfg.system_name or 'HobeRadius') }}">{% else %}<meta name="description" content="{{ _('%(v)s — بوّابة الدخول: الإدارة والمشتركون.', v=cfg.system_name or 'HobeRadius') }}">{% endif %}
   <title>{{ _('%(v)s — البوّابة الرئيسية', v=cfg.system_name or 'HobeRadius') }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <style>
@@ -97,6 +98,8 @@
       display:grid;grid-template-columns:repeat(3, 1fr);
       gap:var(--gap);margin-top:var(--gap);
     }
+    /* بلا سوق البطاقات: مدخلان فقط بعرضٍ كامل (ecards_gate). */
+    .entries--two{grid-template-columns:repeat(2, 1fr)}
     .entry{
       display:flex;flex-direction:column;gap:14px;
       background:var(--paper);
@@ -150,7 +153,7 @@
       .hero p{max-width:none;margin-inline:auto}
       .hero-art{order:-1}
       .hero-art svg{max-width:300px}
-      .entries{grid-template-columns:1fr}
+      .entries,.entries--two{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -182,7 +185,7 @@
     <div>
       <h1>{{ _('أهلًا بك في') }} <span class="hl">{{ cfg.system_name or 'HobeRadius' }}</span></h1>
       <p>
-        {{ _('منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت. اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين، بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء بطاقات الإنترنت وشحن الرصيد.') }}
+        {% if _ecards %}{{ _('منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت. اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين، بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء بطاقات الإنترنت وشحن الرصيد.') }}{% else %}{{ _('منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت. اختر بوّابتك من المدخلين بالأسفل — لوحة الإدارة للمشغّلين، أو بوّابة المشتركين لمتابعة اشتراكك.') }}{% endif %}
       </p>
     </div>
     <div class="hero-art" aria-hidden="true">
@@ -231,7 +234,7 @@
     </div>
   </section>
 
-  <nav class="entries" aria-label="{{ _('بوّابات الدخول') }}">
+  <nav class="entries{% if not _ecards %} entries--two{% endif %}" aria-label="{{ _('بوّابات الدخول') }}">
 
     <a class="entry entry--admin" href="{{ url_for('radius.auth_login') }}">
       <span class="entry-icon" aria-hidden="true">
@@ -262,6 +265,8 @@
       </span>
     </a>
 
+    {#- مدخلُ «السوق» لزبونٍ فُعِّل له سوقُ البطاقات فقط (ecards_gate). -#}
+    {% if ecards_enabled is defined and ecards_enabled() %}
     <a class="entry entry--store" href="{{ url_for('portal.card_login') }}">
       <span class="entry-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none">
@@ -276,6 +281,7 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </a>
+    {% endif %}
 
   </nav>
 

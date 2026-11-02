@@ -118,6 +118,29 @@ def _reset_mt_reachability_breaker():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _ecards_enabled_by_default(request, monkeypatch):
+    """البطاقاتُ الإلكترونيّة وسوقُها مغلقةٌ في الإنتاج إلّا بعقدٍ من لوحة
+    التراخيص (services/ecards_gate.py)، ولا عقدَ في قاعدة الاختبار. فعشراتُ
+    اختبارات السوق والمتجر تختبر الميزةَ نفسَها كما يراها زبونٌ فُعِّلت له —
+    نفتحها هنا. واختبارُ الإغلاق نفسِه يُعلَّم ``@pytest.mark.ecards_closed``."""
+    if request.node.get_closest_marker("ecards_closed"):
+        yield
+        return
+    try:
+        from app.radius.services import ecards_gate
+        monkeypatch.setattr(ecards_gate, "_service_from_snapshot",
+                            lambda tenant_id: {"enabled": True, "status": "active"})
+    except Exception:
+        pass
+    yield
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "ecards_closed: run with the e-cards/marketplace gate in its production default (closed)")
+
+
 @pytest.fixture()
 def tmp_path(request):
     node_id = request.node.nodeid.encode("utf-8", "replace")

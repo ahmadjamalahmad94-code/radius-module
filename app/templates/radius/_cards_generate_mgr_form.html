@@ -1,0 +1,153 @@
+{# نموذج المدير الفرعيّ (توليدٌ من عرضٍ جاهز) — مشتركٌ بين /cards/generate
+   ونافذة «إنشاء حزمة» في صفحة الحزم. السياق من routes/cards.py::_generate_form_context. #}
+{% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
+{%- macro _spd1(kbps) -%}
+  {%- set k = (kbps or 0)|int -%}
+  {%- if k <= 0 -%}—{%- elif k % 1048576 == 0 -%}{{ k // 1048576 }} {{ _('جيجا/ث') }}{%- elif k % 1024 == 0 -%}{{ k // 1024 }} {{ _('ميجا/ث') }}{%- else -%}{{ k }} {{ _('كيلو/ث') }}{%- endif -%}
+{%- endmacro -%}
+{%- macro _qfmt(mb) -%}
+  {%- set q = (mb or 0)|int -%}
+  {%- if q <= 0 -%}{{ _('بلا كوتا') }}{%- elif q % 1024 == 0 -%}{{ q // 1024 }} {{ _('جيجا') }}{%- else -%}{{ q }} {{ _('ميجا') }}{%- endif -%}
+{%- endmacro -%}
+{% if offers %}
+<form id="cg-mgr-form" method="post" data-use-base="{{ url_for('radius.cards_offers') }}">
+  <section class="cg-section">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-gift"></i></span>
+      <span class="cg-section-title">{{ _('توليد من عرض') }}</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field full"><label>{{ _('العرض') }} <span class="req">*</span></label>
+          <select class="hub-select" name="offer_id" id="cg-mgr-offer" required>
+            <option value="">{{ _('— اختر عرضًا —') }}</option>
+            {% for o in offers %}
+              {% set ps = (plan_summaries or {}).get(o.plan_id) %}
+              <option value="{{ o.id }}"
+                      data-sell="{{ '%.2f'|format((o.selling_minor or 0)/100) }}"
+                      data-bulk="{{ '%.2f'|format((o.wholesale_minor or 0)/100) }}"
+                      data-dur="{{ o.duration_minutes or 0 }}"
+                      data-speed="{{ _spd1(ps.speed_down_kbps if ps else 0) }} / {{ _spd1(ps.speed_up_kbps if ps else 0) }}"
+                      data-quota="{{ _qfmt(ps.quota_total_mb if ps else 0) }}">
+                {{ o.name }} · {{ '%.2f'|format((o.selling_minor or 0)/100) }} {{ currency }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('الخطّة والسرعة والصلاحية والسعر كلها من العرض — غير قابلة للتعديل.') }}</div>
+        </div>
+        <div class="cg-field"><label>{{ _('عدد البطاقات') }} <span class="req">*</span></label>
+          <input class="hub-input" type="number" id="cg-mgr-count" name="count" min="1" max="{{ [max_per_batch or 10000, 10000]|min }}" required value="{{ form.get('count') or 20 }}">
+          <div class="help">{{ _('الشيء الوحيد الذي تحدّده.') }}</div></div>
+        <div class="cg-field"><label>{{ _('الموزع / نقطة البيع') }}</label>
+          <select class="hub-select" name="distributor_id">
+            <option value="">{{ _('— بدون موزع —') }}</option>
+            {% for d in distributors %}
+              <option value="{{ d.id }}">{{ d.display_name or d.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('موزّعوك فقط — تُسجَّل الحزمة باسمه للمحاسبة.') }}</div></div>
+      </div>
+      {# ملخّص العرض المقفل بالكامل (كله «من العرض» — للقراءة فقط، يُحدَّث بالـJS) #}
+      <div class="cg-locked-head">
+        <i class="fa-solid fa-lock"></i> {{ _('ملخّص العرض — مقفل، من العرض') }}
+      </div>
+      <div class="cg-calc" id="cg-mgr-calc" aria-live="polite">
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('سعر البيع / بطاقة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-sell">0.00</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('سعر الجملة / بطاقة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-bulk">0.00</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('الصلاحية / المدّة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-dur">—</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('السرعة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-speed" dir="ltr">—</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('الكوتا') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-quota">—</span>
+        </div>
+        <div class="cg-calc-item">
+          <span class="cg-calc-k">{{ _('هامش الربح / بطاقة') }} <i class="fa-solid fa-lock cg-lk"></i></span>
+          <span class="cg-calc-v" id="cg-mgr-margin">0.00</span>
+        </div>
+        <div class="cg-calc-item cg-calc-item--margin">
+          <span class="cg-calc-k">{{ _('إجمالي هامش الربح') }}</span>
+          <span class="cg-calc-v" id="cg-mgr-margin-total">0.00</span>
+        </div>
+        <div class="cg-calc-item cg-calc-item--margin">
+          <span class="cg-calc-k">{{ _('تكلفة الجملة (تُخصم منك)') }}</span>
+          <span class="cg-calc-v" id="cg-mgr-cost">0.00</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد البطاقات') }}</button>
+      </div>
+    </div>
+  </section>
+</form>
+{% else %}
+  {{ hub.empty(_('لا عروض متاحة لك بعد'), sub=_('اطلب من المالك مشاركة عرضٍ معك لتولّد منه البطاقات.'), icon="gift") }}
+{% endif %}
+
+<script>
+(function(){
+  'use strict';
+  var form = document.getElementById('cg-mgr-form');
+  if (!form) return;
+  var offer = document.getElementById('cg-mgr-offer');
+  var count = document.getElementById('cg-mgr-count');
+  var base  = form.getAttribute('data-use-base') || '';
+  var unit  = '{{ currency }}';
+  var elSell   = document.getElementById('cg-mgr-sell');
+  var elBulk   = document.getElementById('cg-mgr-bulk');
+  var elDur    = document.getElementById('cg-mgr-dur');
+  var elSpeed  = document.getElementById('cg-mgr-speed');
+  var elQuota  = document.getElementById('cg-mgr-quota');
+  var elMargin = document.getElementById('cg-mgr-margin');
+  var elMarginTotal = document.getElementById('cg-mgr-margin-total');
+  var elCost   = document.getElementById('cg-mgr-cost');
+  function num(v){ v = parseFloat(v || '0'); return (isFinite(v) && v > 0) ? v : 0; }
+  function durLabel(m){
+    m = parseInt(m || '0', 10) || 0;
+    if (m <= 0) return '—';
+    if (m % 1440 === 0) return (m / 1440) + ' {{ _("يوم") }}';
+    if (m % 60 === 0)   return (m / 60) + ' {{ _("ساعة") }}';
+    return m + ' {{ _("دقيقة") }}';
+  }
+  function recalc(){
+    var opt = offer.options[offer.selectedIndex];
+    var sell  = opt ? num(opt.getAttribute('data-sell')) : 0;
+    var bulk  = opt ? num(opt.getAttribute('data-bulk')) : 0;
+    var dur   = opt ? opt.getAttribute('data-dur') : 0;
+    var speed = (opt && opt.getAttribute('data-speed')) || '—';
+    var quota = (opt && opt.getAttribute('data-quota')) || '—';
+    var c = Math.max(0, Math.floor(num(count.value)));
+    var marginPer = sell - bulk;            // قد يكون سالباً نظريًّا — نَعرضه كما هو
+    elSell.textContent   = sell.toFixed(2) + ' ' + unit;
+    elBulk.textContent   = bulk.toFixed(2) + ' ' + unit;
+    elDur.textContent    = durLabel(dur);
+    elSpeed.textContent  = opt ? speed : '—';
+    elQuota.textContent  = opt ? quota : '—';
+    elMargin.textContent = marginPer.toFixed(2) + ' ' + unit;
+    elMarginTotal.textContent = (c * marginPer).toFixed(2) + ' ' + unit;
+    elCost.textContent   = (c * bulk).toFixed(2) + ' ' + unit;
+  }
+  offer.addEventListener('change', recalc);
+  count.addEventListener('input', recalc);
+  recalc();
+  // عند الإرسال: وجِّه النموذج إلى مسار «استخدام العرض» المحاسَب للعرض المختار.
+  form.addEventListener('submit', function(e){
+    var id = offer.value;
+    if (!id) { e.preventDefault(); return; }
+    form.action = base + '/' + id + '/use';
+  });
+})();
+</script>

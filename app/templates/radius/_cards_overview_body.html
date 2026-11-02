@@ -1,0 +1,649 @@
+{# أقسام «النظرة العامة» للبطاقات (المبيعات · التنبيهات · المخزون + سلوكُ مُنتقي الفترات)
+   — مشتركةٌ بين /cards/overview وأسفل صفحة الحزم (طلب المالك 2026-11-02). السياق
+   من routes/cards.py::_cards_overview_snapshot. #}
+{% import "_partials/hub.html" as hub %}
+{% macro money_value(value) -%}
+  {%- set v = value|float -%}
+  {%- if v >= 1000 -%}{{ "%.1fK"|format(v / 1000) }}
+  {%- else -%}{{ "%.0f"|format(v) }}
+  {%- endif -%}
+{%- endmacro %}
+{#- البطاقاتُ الإلكترونيّة لا تظهر إلّا لزبونٍ فُعِّل له سوقُ البطاقات (ecards_gate). -#}
+{% set _ec = ecards_enabled is defined and ecards_enabled() %}
+
+<div id="co-sales-section">
+{% call hub.section(_('مبيعات الكروت'), icon="receipt", meta=(_('مطبوعة + إلكترونية') if _ec else _('مطبوعة'))) %}
+  <div class="co-sales-board">
+    <div class="co-sales-board-head">
+      <div>
+        <div class="co-sales-kicker"><i class="fa-solid fa-receipt"></i> {{ _('سجل المبيعات حسب الفترة') }}</div>
+        <div class="co-sales-title">{{ _('حركة الكروت: كمية، إيراد، وقنوات البيع') }}</div>
+      </div>
+    </div>
+    <div class="co-sales-summary">
+      <div class="co-sales-summary-item">
+        <span>{{ _('إجمالي الكروت المباعة') }}</span>
+        <strong>{{ sales.total.monthly.count }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-receipt"></i>
+      </div>
+      <div class="co-sales-summary-item co-sales-summary-item--money">
+        <span>{{ _('إجمالي الإيرادات') }}</span>
+        <strong>{{ sales.total.monthly.amount|money }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-coins"></i>
+      </div>
+      <div class="co-sales-summary-item co-sales-summary-item--print">
+        <span>{{ _('مطبوعة') }}</span>
+        <strong>{{ sales.printed.monthly.count }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-print"></i>
+      </div>
+      {% if _ec %}
+      <div class="co-sales-summary-item co-sales-summary-item--wallet">
+        <span>{{ _('إلكترونية') }}</span>
+        <strong>{{ sales.electronic.monthly.count }}</strong>
+        <i class="co-sales-summary-icon fa-solid fa-wallet"></i>
+      </div>
+      {% endif %}
+    </div>
+    <div class="co-sales-performance-head">
+      <strong><i class="fa-solid fa-chart-line"></i> {{ _('أداء مبيعات الكروت') }}</strong>
+      <span>{{ _('الفترات المختارة') }}</span>
+    </div>
+    <div class="co-sales-periods">
+    {% for period in sales.periods %}
+      {% set key = period.key %}
+      {% set total_count = sales.total[key].count|int %}
+      {% set printed_count = sales.printed[key].count|int %}
+      {% set electronic_count = sales.electronic[key].count|int %}
+      {% set printed_pct = (printed_count / total_count * 100) if total_count else 0 %}
+      {% set electronic_pct = (electronic_count / total_count * 100) if total_count else 0 %}
+      <div class="co-sales-lane">
+        <div class="co-sales-period">
+          <span>{{ period.label }}</span>
+          {% if key == "daily" %}
+            {% set picker_param = "sales_day" %}
+            {% set picker_kind = "day" %}
+            {% set picker_value = sales.filters.daily %}
+          {% elif key == "weekly" %}
+            {% set picker_param = "sales_week" %}
+            {% set picker_kind = "week" %}
+            {% set picker_value = sales.filters.weekly %}
+          {% elif key == "monthly" %}
+            {% set picker_param = "sales_month" %}
+            {% set picker_kind = "month" %}
+            {% set picker_value = sales.filters.monthly %}
+          {% else %}
+            {% set picker_param = "sales_year" %}
+            {% set picker_kind = "year" %}
+            {% set picker_value = sales.filters.yearly %}
+          {% endif %}
+          <button class="co-sales-picker" type="button" title="{{ _('اختيار %(label)s', label=period.label) }}" aria-label="{{ _('اختيار %(label)s', label=period.label) }}" data-co-sales-param="{{ picker_param }}" data-co-sales-kind="{{ picker_kind }}" data-co-sales-value="{{ picker_value }}">
+            <i class="fa-solid fa-calendar-day"></i>
+          </button>
+        </div>
+        <div class="co-table-note">{{ period.range|bidi_nums }}</div>
+        <div class="co-sales-metrics">
+          <div class="co-sales-metric">
+            <span>{{ _('الكروت') }}</span>
+            <strong class="co-sales-value">{{ sales.total[key].count }}</strong>
+          </div>
+          <div class="co-sales-metric">
+            <span>{{ _('الإيراد') }}</span>
+            <strong class="co-sales-value co-sales-value--money">{{ sales.total[key].amount|money }}</strong>
+          </div>
+        </div>
+        <div class="co-sales-split">
+          <div class="co-sales-split-track" aria-hidden="true">
+            <span class="co-sales-split-print" style="width:{{ printed_pct }}%"></span>
+            {% if _ec %}<span class="co-sales-split-electronic" style="width:{{ electronic_pct }}%"></span>{% endif %}
+          </div>
+          <div class="co-sales-meta">
+            <span><i class="fa-solid fa-print"></i> {{ _('مطبوعة') }} <bdi dir="ltr">{{ sales.printed[key].count }} / {{ money_value(sales.printed[key].amount) }}</bdi></span>
+            {% if _ec %}<span><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }} <bdi dir="ltr">{{ sales.electronic[key].count }} / {{ money_value(sales.electronic[key].amount) }}</bdi></span>{% endif %}
+          </div>
+        </div>
+        <a class="co-sales-link" href="#sales-{{ key }}">
+          <i class="fa-solid fa-table-list"></i> {{ _('فتح سجل الفترة') }}
+        </a>
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+  {% for period in sales.periods %}
+  {% set key = period.key %}
+  <div class="co-sales-modal" id="sales-{{ key }}" role="dialog" aria-modal="true" aria-labelledby="sales-title-{{ key }}">
+    <div class="co-sales-dialog">
+      <div class="co-sales-dialog-head">
+        <h3 id="sales-title-{{ key }}">{{ _('الكروت المباعة - %(label)s (%(range)s)', label=period.label, range=period.range) }}</h3>
+        <a class="co-sales-close" href="#" aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></a>
+      </div>
+      {% if sales.details[key] %}
+      {# لا تضع data-uds-table هنا: قسم المبيعات (#co-sales-section) يعاد بناؤه بالكامل عبر updateSales/replaceWith فيتعارض مع لقطة الصفوف في uds_table.js #}
+      <div class="hub-table-wrap" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ _('النوع') }}</th>
+              <th>{{ _('اسم المستخدم') }}</th>
+              <th>{{ _('الحزمة') }}</th>
+              <th class="num">{{ _('السعر') }}</th>
+              <th>{{ _('الوقت') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sale in sales.details[key] %}
+            <tr>
+              <td class="mono">{{ loop.index }}</td>
+              <td>
+                {% if sale.sale_type == "electronic" %}
+                  <span class="co-type-pill co-type-pill--electronic"><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }}</span>
+                {% else %}
+                  <span class="co-type-pill co-type-pill--printed"><i class="fa-solid fa-print"></i> {{ _('مطبوعة') }}</span>
+                {% endif %}
+              </td>
+              <td class="mono"><strong>{{ sale.username or "—" }}</strong></td>
+              <td>
+                {# الحزمة هي وحدة الشراء التي يتتبّعها المشغّل — والسعر يُشتقّ
+                   منها، فمن حقّه أن يقفز إليها من الصفّ مباشرةً. #}
+                {% if sale.batch_id %}
+                  {% if can_submit('radius.cards_of_batch', 'GET') %}<a href="{{ url_for('radius.cards_of_batch', batch_id=sale.batch_id) }}"
+                     class="entity-link" title="{{ _('عرض بطاقات هذه الحزمة') }}">{% endif %}
+                    {{ sale.batch_name or sale.batch_code or ('#' ~ sale.batch_id) }}
+                  {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
+                {% else %}
+                  {{ sale.batch_name or sale.batch_code or "—" }}
+                {% endif %}
+                {% if sale.plan_name and sale.plan_name != sale.batch_name %}
+                  <div class="co-table-note">{{ sale.plan_name }}</div>
+                {% endif %}
+              </td>
+              <td class="num mono">{{ sale.amount|money }}</td>
+              <td class="co-table-note">{{ sale.sold_at|dt_local if sale.sold_at else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% set _hidden = (sales.details_truncated or {}).get(key, 0) %}
+      {% if _hidden %}
+        {# الاقتطاع يُصرَّح به: العدّاد أعلاه يشمل الفترة كلّها، والجدول أحدثَها. #}
+        <p class="co-table-note" style="padding:10px 14px;margin:0">
+          {{ _('يُعرض') }} <strong>{{ sales.details[key]|length }}</strong>
+          {{ _('من') }} <strong>{{ sales.total[key].count }}</strong>
+          — {{ _('الأحدث أوّلًا، و') }}{{ _hidden }} {{ _('صفًّا أقدم غير معروض.') }}
+        </p>
+      {% endif %}
+      {% else %}
+        {{ hub.empty(_('لا توجد كروت مباعة لهذه الفترة'), sub=_('عند بيع أو استخدام كروت ستظهر هنا مباشرة.'), icon="receipt") }}
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% endcall %}
+</div>
+
+{% call hub.section(_('تنبيهات مختصرة'), icon="bell") %}
+    <div class="co-alerts">
+      {% for alert in alerts %}
+        {# التنبيه رابط: ينقل لصفحة المعالجة، مع سطر شرح تحت النص #}
+        <a class="co-alert co-alert--{{ alert.level or 'grey' }} co-alert--link"
+           href="{{ alert.href or url_for('radius.cards_batches') }}"
+           title="{{ alert.hint or '' }}">
+          <i class="fa-solid fa-{% if alert.level == 'green' %}circle-check{% elif alert.level == 'red' %}circle-exclamation{% elif alert.level == 'amber' %}triangle-exclamation{% else %}circle-info{% endif %}"></i>
+          <span class="co-alert-body">
+            <span>{{ alert.text }}</span>
+            {% if alert.hint %}<small class="co-alert-hint">{{ alert.hint }} ←</small>{% endif %}
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+{% endcall %}
+
+{% call hub.section(_('ملخص مخزون حزم البطاقات'), icon="boxes-stacked") %}
+  {% set printed_packages = stock_packages.printed if stock_packages else [] %}
+  {% set electronic_packages = (stock_packages.electronic if stock_packages else []) if _ec else [] %}
+  {% if printed_packages or electronic_packages %}
+    <div class="co-stock-tables">
+      <div class="co-stock-table-card co-stock-table-card--printed">
+        <div class="co-stock-table-head">
+          <span class="co-stock-table-title"><i class="fa-solid fa-print"></i> {{ _('حزم مطبوعة') }}</span>
+          <span class="co-stock-table-total">{{ _('دفعات الطباعة') }}</span>
+        </div>
+        {# تفعيل نظام الجداول الموحد المعتمد (فرز + أعمدة + ترقيم صفحات) #}
+        <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>{{ _('الحزمة') }}</th>
+                <th class="num">{{ _('إجمالي') }}</th>
+                <th class="num">{{ _('باقي') }}</th>
+                <th class="num">{{ _('منتهي') }}</th>
+                <th class="num">{{ _('متصل') }}</th>
+                <th class="num">{{ _('مستخدم غير متصل') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for package in printed_packages %}
+                <tr>
+                  <td>
+                    <strong>{{ package.package_name }}</strong>
+                    <div class="co-table-note mono">{{ package.batch_code }}</div>
+                  </td>
+                  <td class="num mono">{{ package.get("total_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("available_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("expired_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("online_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="co-table-note">{{ _('لا توجد حزم مطبوعة بعد') }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% if _ec %}
+      <div class="co-stock-table-card co-stock-table-card--electronic">
+        <div class="co-stock-table-head">
+          <span class="co-stock-table-title"><i class="fa-solid fa-wallet"></i> {{ _('حزم البيع الإلكتروني') }}</span>
+          <span class="co-stock-table-total">{{ _('سوق الكروت') }}</span>
+        </div>
+        {# تفعيل نظام الجداول الموحد المعتمد (فرز + أعمدة + ترقيم صفحات) #}
+        <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>{{ _('الحزمة') }}</th>
+                <th class="num">{{ _('مباع') }}</th>
+                <th class="num">{{ _('باقي') }}</th>
+                <th class="num">{{ _('منتهي') }}</th>
+                <th class="num">{{ _('متصل') }}</th>
+                <th class="num">{{ _('مستخدم غير متصل') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for package in electronic_packages %}
+                <tr>
+                  <td><strong>{{ package.package_name }}</strong></td>
+                  <td class="num mono">{{ package.get("total_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("available_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("expired_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("online_cards", 0)|int }}</td>
+                  <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="co-table-note">{{ _('لا توجد حزم بيع إلكتروني بعد') }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  {% else %}
+    {{ hub.empty(_('لا يوجد مخزون بعد'), sub=_('بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.'), icon="box-open") }}
+  {% endif %}
+{% endcall %}
+
+<script>
+(() => {
+  const sectionId = "co-sales-section";
+  const popoverId = "co-sales-agenda";
+  const monthFormatter = new Intl.DateTimeFormat("ar-u-nu-latn", {month: "long", year: "numeric"});
+  const compactMonthFormatter = new Intl.DateTimeFormat("ar-u-nu-latn", {month: "long"});
+  const weekdays = [{{ pgettext("weekday", "س")|tojson }}, {{ pgettext("weekday", "ح")|tojson }}, {{ pgettext("weekday", "ن")|tojson }}, {{ pgettext("weekday", "ث")|tojson }}, {{ pgettext("weekday", "ر")|tojson }}, {{ pgettext("weekday", "خ")|tojson }}, {{ pgettext("weekday", "ج")|tojson }}];
+
+  function pad(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function dateValue(date) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function parseDay(value) {
+    const parts = String(value || "").split("-").map(Number);
+    if (parts.length === 3 && parts.every(Boolean)) return new Date(parts[0], parts[1] - 1, parts[2]);
+    return new Date();
+  }
+
+  function parseMonth(value) {
+    const parts = String(value || "").split("-").map(Number);
+    if (parts.length === 2 && parts.every(Boolean)) return new Date(parts[0], parts[1] - 1, 1);
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  function saturdayWeekStart(date) {
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    start.setDate(start.getDate() - ((start.getDay() + 1) % 7));
+    return start;
+  }
+
+  function saturdayWeekOne(year) {
+    return saturdayWeekStart(new Date(year, 0, 1));
+  }
+
+  function saturdayWeekValue(date) {
+    const start = saturdayWeekStart(date);
+    let year = start.getFullYear();
+    if (start < saturdayWeekOne(year)) year -= 1;
+    const week = Math.floor((start - saturdayWeekOne(year)) / 604800000) + 1;
+    return `${year}-W${pad(week)}`;
+  }
+
+  function weekStartFromValue(value) {
+    const match = String(value || "").match(/^(\d{4})-W(\d{2})$/);
+    const now = new Date();
+    const year = match ? Number(match[1]) : now.getFullYear();
+    const week = match ? Number(match[2]) : Number(saturdayWeekValue(now).slice(-2));
+    const start = saturdayWeekOne(year);
+    start.setDate(start.getDate() + (week - 1) * 7);
+    return start;
+  }
+
+  function clearAgenda() {
+    document.querySelectorAll(".co-sales-picker.is-open").forEach((item) => item.classList.remove("is-open"));
+    const existing = document.getElementById(popoverId);
+    if (existing) existing.remove();
+    document.removeEventListener("keydown", onAgendaKeydown);
+    document.removeEventListener("click", onAgendaOutsideClick, true);
+  }
+
+  function onAgendaKeydown(event) {
+    if (event.key === "Escape") clearAgenda();
+  }
+
+  function onAgendaOutsideClick(event) {
+    const agenda = document.getElementById(popoverId);
+    if (!agenda) return;
+    if (agenda.contains(event.target) || event.target.closest(".co-sales-picker")) return;
+    clearAgenda();
+  }
+
+  function agendaShell(button, state) {
+    const agenda = document.createElement("div");
+    agenda.id = popoverId;
+    agenda.className = "co-sales-agenda";
+    agenda.dir = "rtl";
+    agenda.innerHTML = `
+      <div class="co-sales-agenda-head">
+        <div class="co-sales-agenda-title">
+          <strong>${state.title}</strong>
+          <span>${state.subtitle}</span>
+        </div>
+        <div class="co-sales-agenda-nav">
+          <button type="button" data-agenda-prev aria-label="${ {{ _("السابق")|tojson }} }"><i class="fa-solid fa-chevron-right"></i></button>
+          <button type="button" data-agenda-next aria-label="${ {{ _("التالي")|tojson }} }"><i class="fa-solid fa-chevron-left"></i></button>
+        </div>
+      </div>
+      <div class="co-sales-agenda-body"></div>
+    `;
+    document.body.appendChild(agenda);
+    const rect = button.getBoundingClientRect();
+    const width = Math.min(318, window.innerWidth - 28);
+    const left = Math.max(14, Math.min(window.innerWidth - width - 14, rect.left + rect.width - width));
+    agenda.style.width = `${width}px`;
+    agenda.style.left = `${left}px`;
+    agenda.style.visibility = "hidden";
+    return agenda;
+  }
+
+  function placeAgenda(button, agenda) {
+    const rect = button.getBoundingClientRect();
+    const naturalHeight = agenda.offsetHeight;
+    const gap = 10;
+    const viewportPadding = 12;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+    const spaceAbove = rect.top - viewportPadding - gap;
+    const openAbove = naturalHeight > spaceBelow && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(180, openAbove ? spaceAbove : spaceBelow);
+    agenda.style.maxHeight = `${Math.min(naturalHeight, availableHeight)}px`;
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    const head = agenda.querySelector(".co-sales-agenda-head");
+    const foot = agenda.querySelector(".co-sales-agenda-foot");
+    if (body) {
+      const chromeHeight = (head?.offsetHeight || 0) + (foot?.offsetHeight || 0);
+      body.style.maxHeight = `${Math.max(120, Math.min(naturalHeight, availableHeight) - chromeHeight)}px`;
+    }
+    const height = agenda.offsetHeight;
+    const top = openAbove
+      ? rect.top - height - gap
+      : rect.bottom + gap;
+    agenda.style.top = `${Math.max(viewportPadding, Math.min(window.innerHeight - height - viewportPadding, top))}px`;
+    agenda.style.transformOrigin = openAbove ? "bottom center" : "top center";
+    agenda.style.visibility = "visible";
+    requestAnimationFrame(() => agenda.classList.add("is-ready"));
+  }
+
+  function selectValue(button, value) {
+    const root = document.getElementById(sectionId);
+    const param = button.dataset.coSalesParam;
+    clearAgenda();
+    if (param && value && root) updateSales(param, value, root);
+  }
+
+  function renderDay(button, baseDate) {
+    const view = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+    const selected = dateValue(parseDay(button.dataset.coSalesValue));
+    const agenda = agendaShell(button, {
+      title: monthFormatter.format(view),
+      subtitle: `${view.getFullYear()}-${pad(view.getMonth() + 1)}`
+    });
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    const firstDay = (view.getDay() + 1) % 7;
+    const start = new Date(view);
+    start.setDate(1 - firstDay);
+    body.innerHTML = `
+      <div class="co-sales-agenda-weekdays">${weekdays.map((day) => `<span>${day}</span>`).join("")}</div>
+      <div class="co-sales-agenda-grid"></div>
+      <div class="co-sales-agenda-foot">
+        <button type="button" class="co-sales-agenda-action" data-agenda-today>${ {{ _("اليوم")|tojson }} }</button>
+        <button type="button" class="co-sales-agenda-action" data-agenda-clear>${ {{ _("إغلاق")|tojson }} }</button>
+      </div>
+    `;
+    const grid = body.querySelector(".co-sales-agenda-grid");
+    for (let index = 0; index < 42; index += 1) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      const value = dateValue(day);
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-day";
+      if (day.getMonth() !== view.getMonth()) item.classList.add("is-muted");
+      if (value === selected) item.classList.add("is-selected");
+      item.textContent = day.getDate();
+      item.addEventListener("click", () => selectValue(button, value));
+      grid.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      agenda.remove();
+      renderDay(button, new Date(view.getFullYear(), view.getMonth() - 1, 1));
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      agenda.remove();
+      renderDay(button, new Date(view.getFullYear(), view.getMonth() + 1, 1));
+    });
+    agenda.querySelector("[data-agenda-today]").addEventListener("click", () => selectValue(button, dateValue(new Date())));
+    agenda.querySelector("[data-agenda-clear]").addEventListener("click", clearAgenda);
+    placeAgenda(button, agenda);
+  }
+
+  function renderWeek(button, startDate) {
+    const selected = button.dataset.coSalesValue || saturdayWeekValue(new Date());
+    const agenda = agendaShell(button, {title: {{ _("اختيار الأسبوع")|tojson }}, subtitle: selected});
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    body.innerHTML = `<div class="co-sales-agenda-list"></div>`;
+    const list = body.querySelector(".co-sales-agenda-list");
+    for (let index = -3; index <= 4; index += 1) {
+      const start = new Date(startDate);
+      start.setDate(startDate.getDate() + index * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const value = saturdayWeekValue(start);
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-choice";
+      if (value === selected) item.classList.add("is-selected");
+      item.innerHTML = `<span>${ {{ _("الأسبوع")|tojson }} } ${Number(value.slice(-2))}</span><small>${dateValue(start)} - ${dateValue(end)}</small>`;
+      item.addEventListener("click", () => selectValue(button, value));
+      list.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      const nextStart = new Date(startDate);
+      nextStart.setDate(startDate.getDate() - 56);
+      agenda.remove();
+      renderWeek(button, nextStart);
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      const nextStart = new Date(startDate);
+      nextStart.setDate(startDate.getDate() + 56);
+      agenda.remove();
+      renderWeek(button, nextStart);
+    });
+    placeAgenda(button, agenda);
+  }
+
+  function renderMonth(button, baseDate) {
+    const selected = button.dataset.coSalesValue || `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}`;
+    const agenda = agendaShell(button, {title: `${ {{ _("شهور")|tojson }} } ${baseDate.getFullYear()}`, subtitle: String(baseDate.getFullYear())});
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    body.innerHTML = `<div class="co-sales-agenda-months"></div>`;
+    const list = body.querySelector(".co-sales-agenda-months");
+    for (let month = 0; month < 12; month += 1) {
+      const value = `${baseDate.getFullYear()}-${pad(month + 1)}`;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-choice";
+      if (value === selected) item.classList.add("is-selected");
+      item.textContent = compactMonthFormatter.format(new Date(baseDate.getFullYear(), month, 1));
+      item.addEventListener("click", () => selectValue(button, value));
+      list.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      agenda.remove();
+      renderMonth(button, new Date(baseDate.getFullYear() - 1, 0, 1));
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      agenda.remove();
+      renderMonth(button, new Date(baseDate.getFullYear() + 1, 0, 1));
+    });
+    placeAgenda(button, agenda);
+  }
+
+  function renderYear(button, selectedYear) {
+    const year = Number(selectedYear) || new Date().getFullYear();
+    const start = year - 5;
+    const agenda = agendaShell(button, {title: {{ _("اختيار السنة")|tojson }}, subtitle: `${start} - ${start + 11}`});
+    const body = agenda.querySelector(".co-sales-agenda-body");
+    body.innerHTML = `<div class="co-sales-agenda-years"></div>`;
+    const list = body.querySelector(".co-sales-agenda-years");
+    for (let current = start; current < start + 12; current += 1) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "co-sales-agenda-choice";
+      if (current === year) item.classList.add("is-selected");
+      item.textContent = current;
+      item.addEventListener("click", () => selectValue(button, String(current)));
+      list.appendChild(item);
+    }
+    agenda.querySelector("[data-agenda-prev]").addEventListener("click", () => {
+      agenda.remove();
+      renderYear(button, year - 12);
+    });
+    agenda.querySelector("[data-agenda-next]").addEventListener("click", () => {
+      agenda.remove();
+      renderYear(button, year + 12);
+    });
+    placeAgenda(button, agenda);
+  }
+
+  function openAgenda(button) {
+    if (button.classList.contains("is-open")) {
+      clearAgenda();
+      return;
+    }
+    clearAgenda();
+    button.classList.add("is-open");
+    if (button.dataset.coSalesKind === "day") renderDay(button, parseDay(button.dataset.coSalesValue));
+    if (button.dataset.coSalesKind === "week") renderWeek(button, weekStartFromValue(button.dataset.coSalesValue));
+    if (button.dataset.coSalesKind === "month") renderMonth(button, parseMonth(button.dataset.coSalesValue));
+    if (button.dataset.coSalesKind === "year") renderYear(button, button.dataset.coSalesValue);
+    setTimeout(() => {
+      document.addEventListener("click", onAgendaOutsideClick, true);
+      document.addEventListener("keydown", onAgendaKeydown);
+    }, 0);
+  }
+
+  async function updateSales(param, value, root) {
+    // أسفلَ صفحة الحزم (‎data-overview-src‎) يُجلب القسمُ من جزء النظرة العامّة
+    // ومعه فتراتُ المبيعات المختارة، ويبقى عنوانُ الصفحة صفحةَ الحزم.
+    const host = (document.getElementById(sectionId) || root).closest("[data-overview-src]");
+    const url = new URL(host ? host.dataset.overviewSrc : window.location.href, window.location.href);
+    if (host) {
+      new URL(window.location.href).searchParams.forEach((v, k) => {
+        if (k.startsWith("sales_")) url.searchParams.set(k, v);
+      });
+    }
+    url.searchParams.set(param, value);
+    root.setAttribute("aria-busy", "true");
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {"X-Requested-With": "fetch"},
+        credentials: "same-origin"
+      });
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const next = doc.getElementById(sectionId);
+      const current = document.getElementById(sectionId);
+      if (next && current) {
+        current.replaceWith(next);
+        if (host) {
+          const pageUrl = new URL(window.location.href);
+          pageUrl.searchParams.set(param, value);
+          history.replaceState(null, "", pageUrl.toString());
+        } else {
+          history.replaceState(null, "", url.toString());
+        }
+        bindSalesPickers(next);
+      }
+    } finally {
+      const current = document.getElementById(sectionId);
+      if (current) current.removeAttribute("aria-busy");
+    }
+  }
+
+  function bindSalesPickers(root) {
+    root.querySelectorAll(".co-sales-picker[data-co-sales-param]").forEach((button) => {
+      button.addEventListener("click", () => openAgenda(button));
+    });
+  }
+
+  const section = document.getElementById(sectionId);
+  if (section) bindSalesPickers(section);
+
+  // Escape يُغلق نافذةَ «الكروت المباعة» (مفتوحةٌ بـ:target) كما يفعل زرُّ الإغلاق (href="#").
+  // مستمعٌ على document لأنّ القسمَ يُستبدَل كلّيًّا في updateSales. إن كانت الأجندةُ مفتوحةً فهي أَولى.
+  // فتحُ نافذة «الكروت المباعة» وإغلاقُها بالمرساة (:target) يقفز بالصفحة —
+  // أسفلَ صفحة الحزم يرمي المشغّلَ إلى أعلاها. نحفظ موضعَ التمرير ونُعيده.
+  function setHashKeepScroll(hash) {
+    const y = window.scrollY;
+    window.location.hash = hash;
+    window.scrollTo(0, y);
+  }
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest(".co-sales-link[href^='#'], .co-sales-close[href='#']");
+    if (!link) return;
+    event.preventDefault();
+    setHashKeepScroll(link.classList.contains("co-sales-close") ? "" : link.getAttribute("href"));
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || document.getElementById(popoverId)) return;
+    if (!document.querySelector(".co-sales-modal:target")) return;
+    event.preventDefault();
+    setHashKeepScroll("");
+  });
+})();
+</script>

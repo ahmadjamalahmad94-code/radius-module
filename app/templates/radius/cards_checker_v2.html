@@ -31,7 +31,15 @@
   {# بصمة الإصدار ضروريّة هنا: بلا `v` يُقدّم المتصفّح النسخة المخزَّنة،
      فينشر الإصلاح على الخادم ويبقى المستخدم على الملفّ القديم — ويُبلّغ
      أنّ العطب باقٍ. الـCSS كان مبصومًا والـJS لم يكن. #}
-  <script src="{{ url_for('static', filename='js/cards_checker_v2.js', v='mt108') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/cards_checker_v2.js', v='hub1') }}" defer></script>
+  {% if hr_embed %}
+  {# داخل نافذة «حزم البطاقات»: رأسُ النافذة يحمل العنوان، فلا عنوانَ ثانٍ ولا
+     «رجوع» داخل الإطار؛ والبسيطُ بسيطٌ فعلًا — عدّاداتُ الهيرو للمتقدّم فقط. #}
+  <style>
+    .cc-hero-shell .uds-hero-top{ display:none; }
+    .cc-page[data-cc-current-mode="simple"] .cc-hero-shell > .uds-hero{ display:none; }
+  </style>
+  {% endif %}
 {% endblock %}
 
 {# ─────────── helpers ─────────── #}

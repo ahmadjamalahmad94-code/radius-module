@@ -767,8 +767,8 @@
         {% set _temp_unknown = _temp_state and _temp_state.unknown %}
         {% set _special = s.has_custom_speed or _temp_active %}
         {% set _is_card = s.user_type == 'card' %}
-        {% set _profile_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_profile', username=s.username) %}
-        {% set _edit_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_edit', username=s.username) %}
+        {% set _profile_url = (url_for('radius.cards_batches', check='1', query=s.username) if can_submit('radius.cards_batches', 'GET') else url_for('radius.cards_checker', query=s.username)) if _is_card else url_for('radius.users_profile', username=s.username) %}
+        {% set _edit_url = (url_for('radius.cards_batches', check='1', query=s.username) if can_submit('radius.cards_batches', 'GET') else url_for('radius.cards_checker', query=s.username)) if _is_card else url_for('radius.users_edit', username=s.username) %}
         {% set _device = (device_by_mac or {}).get((s.mac_address or '')|lower) %}
         {# كلّ صفّ هنا جلسة حيّة → شريط الحالة الأخضر (متصل الآن) نفسه المعتمد
            في جدول المشتركين. #}

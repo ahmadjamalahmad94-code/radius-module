@@ -1,0 +1,189 @@
+{# سلوك نموذج «إنشاء حزمة» (أقسام قابلة للطيّ، الموزّع حسب المدير، الإجماليّات،
+   معاينة اسم المستخدم، كلمة المرور حين «برقمٍ فقط») — مشتركٌ بين الصفحة والنافذة. #}
+<script>
+(function(){
+  'use strict';
+  var LS = 'hr:cg-form:sec:';
+  document.querySelectorAll('.cg-section.is-collapsible').forEach(function(card){
+    var k = card.dataset.sec; if (!k) return;
+    var v = null;
+    try { v = localStorage.getItem(LS + k); } catch(_) {}
+    if (v === 'collapsed') card.classList.add('is-collapsed');
+    else if (v === 'open')  card.classList.remove('is-collapsed');
+    var head = card.querySelector('.cg-section-head');
+    if (head) head.addEventListener('click', function(){
+      card.classList.toggle('is-collapsed');
+      try { localStorage.setItem(LS + k,
+        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
+    });
+  });
+
+  // #20: keep the hidden duration_mode in sync with «العدّ من أول اتصال».
+  // ON → Mode B (wall-clock from first login) = 'time_unit';
+  // OFF → Mode A (usage-seconds budget) = 'seconds'.
+  var modeHidden = document.querySelector('[data-duration-mode]');
+  var cfc = document.querySelector('[name="count_from_first_connect"]');
+  if (modeHidden && cfc) {
+    var syncDurationMode = function(){
+      modeHidden.value = cfc.checked ? 'time_unit' : 'seconds';
+    };
+    cfc.addEventListener('change', syncDurationMode);
+    syncDurationMode();
+  }
+
+  // قَصْر «الموزع/نقطة البيع» على موزّعي المدير المختار (للسوبر فقط — يوجد
+  // عنصر اختيار مدير). الخادم يُنفِّذ العزل ذاته في _enforce_batch_owner_scope،
+  // وهذا تحسين تجربة فقط: نُخفي خيارات الموزّعين الذين لا يتبعون المدير.
+  var mgrSel  = document.getElementById('cg-manager-select');
+  var distSel = document.getElementById('cg-distributor-select');
+  if (mgrSel && distSel) {
+    var filterDistributors = function(){
+      var mgr = mgrSel.value || '';
+      Array.prototype.forEach.call(distSel.options, function(opt){
+        var owner = opt.getAttribute('data-owner') || '';
+        // «بدون موزع» (قيمة فارغة) يبقى دائمًا. باقي الخيارات تظهر فقط إن
+        // طابق مالكُها المديرَ المختار (أو لم يُختَر مدير بعد).
+        var show = (opt.value === '') || (mgr === '') || (owner === mgr);
+        opt.hidden = !show;
+        opt.disabled = !show;
+      });
+      // لو صار الخيار المختار مخفيًّا، ارجع إلى «بدون موزع».
+      if (distSel.selectedOptions.length && distSel.selectedOptions[0].hidden) {
+        distSel.value = '';
+      }
+    };
+    mgrSel.addEventListener('change', filterDistributors);
+    filterDistributors();
+  }
+
+  // ── الحساب الحيّ للإجماليّات وهامش الربح (مرجعيّ فقط) ──
+  // إجمالي الجملة = العدد × سعر الجملة، إجمالي البيع = العدد × سعر البيع،
+  // الهامش = إجمالي البيع − إجمالي الجملة. متين ضدّ الفراغ/الصفر (لا NaN).
+  var countEl = document.getElementById('cg-count');
+  var sellEl  = document.getElementById('cg-price-sell');
+  var bulkEl  = document.getElementById('cg-price-bulk');
+  var outBulk = document.getElementById('cg-total-bulk');
+  var outSell = document.getElementById('cg-total-sell');
+  var outMargin = document.getElementById('cg-total-margin');
+  var outDetail = document.getElementById('cg-margin-detail');
+  if (countEl && sellEl && bulkEl && outBulk && outSell && outMargin) {
+    var num = function(el){
+      var v = parseFloat((el && el.value) || '0');
+      return (isFinite(v) && v > 0) ? v : 0;
+    };
+    var fmt = function(n){
+      if (!isFinite(n)) n = 0;
+      return n.toFixed(2);
+    };
+    var recalc = function(){
+      var count = Math.max(0, Math.floor(num(countEl)));
+      var sell = num(sellEl), bulk = num(bulkEl);
+      var totalBulk = count * bulk;
+      var totalSell = count * sell;
+      var margin = totalSell - totalBulk;
+      var perCard = sell - bulk;
+      outBulk.textContent = fmt(totalBulk);
+      outSell.textContent = fmt(totalSell);
+      outMargin.textContent = fmt(margin);
+      if (outDetail) {
+        var pct = (bulk > 0) ? (perCard / bulk * 100) : 0;
+        outDetail.textContent = '{{ _("هامش البطاقة الواحدة:") }} ' + fmt(perCard)
+          + (bulk > 0 ? ' ({{ _("نسبة") }} ' + fmt(pct) + '%)' : '');
+      }
+    };
+    [countEl, sellEl, bulkEl].forEach(function(el){
+      el.addEventListener('input', recalc);
+      el.addEventListener('change', recalc);
+    });
+    recalc();
+  }
+
+  /* ── معاينة اسم المستخدم — نفس حساب cards_repo.generate_cards ─────────
+     الطول المطلوب كلّيّ: الجزء المولَّد = الطول − (البادئة + اللاحقة) وحدُّه
+     الأدنى 1، والاسم كلّه يُخزَّن بأحرفٍ صغيرة. والخادم (generate_batch)
+     يحذف المسافات ويحوّل الأرقام الهنديّة في البادئة/اللاحقة، فنفعل مثله
+     هنا كي تطابق المعاينةُ البطاقاتِ الناتجة. */
+  var unLen = document.querySelector('[data-un-length]');
+  var unPre = document.querySelector('[data-un-prefix]');
+  var unSuf = document.querySelector('[data-un-suffix]');
+  var pvPre = document.querySelector('[data-unprev-pre]');
+  if (unLen && unPre && unSuf && pvPre) {
+    var pvGen = document.querySelector('[data-unprev-gen]');
+    var pvSuf = document.querySelector('[data-unprev-suf]');
+    var pvGenLen = document.querySelector('[data-unprev-genlen]');
+    var pvWarn = document.querySelector('[data-unprev-warn]');
+    var pvBn = document.querySelector('[data-unprev-bn]');
+    var pvBnLegend = document.querySelector('[data-unprev-bn-legend]');
+    var unIbn = document.getElementById('ibn');
+    /* «تضمين رقم الحزمة» يُطبَّق بعد إنشاء الحزمة (cards_store.generate_cards_for_batch)
+       فنعرض الرقم المتوقَّع للحزمة التالية؛ يدخل الطول الكلّيّ كالبادئة. */
+    var nextBn = {{ (next_batch_id or 1)|string|tojson }};
+    var clean = function(v){
+      return String(v || '').replace(/\s+/g, '').replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function(d){
+        var c = d.charCodeAt(0);
+        return String.fromCharCode(48 + (c >= 0x06F0 ? c - 0x06F0 : c - 0x0660));
+      }).toLowerCase();
+    };
+    var renderUn = function(){
+      var pre = clean(unPre.value), suf = clean(unSuf.value);
+      var bn = (unIbn && unIbn.checked) ? nextBn : '';
+      var total = parseInt(unLen.value, 10);
+      if (!isFinite(total) || total <= 0) total = 8;
+      /* f05-L3: نفس قاعدة الخادم (_check_username_length_fits): الأجزاء
+         الثابتة يجب أن تترك خانةً عشوائيّة واحدة على الأقلّ، وإلّا يُرفض
+         التوليد — فلا نَعِد باسمٍ أطول من المطلوب يرفضه الخادم. */
+      var fixed = pre.length + bn.length + suf.length;
+      var genLen = Math.max(0, total - fixed);
+      var gen = '';
+      while (gen.length < genLen) gen += '1234567890';
+      pvPre.textContent = pre;
+      pvGen.textContent = gen.slice(0, genLen);
+      pvSuf.textContent = suf;
+      if (pvBn) { pvBn.textContent = bn; pvBn.hidden = !bn; }
+      if (pvBnLegend) pvBnLegend.hidden = !bn;
+      if (pvGenLen) pvGenLen.textContent = String(genLen);
+      var cnt = parseInt((document.getElementById('cg-count') || {}).value, 10) || 0;
+      var msg = '';
+      if (fixed >= total) {
+        var parts = [{{ _('البادئة')|tojson }} + ' ' + pre.length];
+        if (bn) parts.push({{ _('رقم الحزمة')|tojson }} + ' ' + bn.length);
+        parts.push({{ _('اللاحقة')|tojson }} + ' ' + suf.length);
+        msg = {{ _('طول اسم المستخدم المختار {total} محارف لا يتّسع: الأجزاء الثابتة ({parts} = {fixed}) لا تترك خانةً للأرقام العشوائيّة. اجعل الطول {need} على الأقلّ (والحدّ {max})، أو قصّر البادئة/اللاحقة.')|tojson }}
+          .replace('{total}', String(total)).replace('{parts}', parts.join(' + '))
+          .replace('{fixed}', String(fixed)).replace('{need}', String(fixed + 1))
+          .replace('{max}', String(parseInt(unLen.getAttribute('max'), 10) || 32));
+      } else if (genLen < 10 && cnt > Math.pow(10, genLen)) {
+        msg = {{ _('خانات الجزء المولَّد لا تكفي لعدد البطاقات المطلوب دون تكرار. زِد «طول اسم المستخدم».')|tojson }};
+      }
+      if (pvWarn) { pvWarn.textContent = msg; pvWarn.hidden = !msg; }
+    };
+    [unLen, unPre, unSuf, unIbn, document.getElementById('cg-count')].forEach(function(el){
+      if (!el) return;
+      el.addEventListener('input', renderUn);
+      el.addEventListener('change', renderUn);
+    });
+    renderUn();
+  }
+
+  /* ── قسمُ كلمة المرور يختفي حين تُباع البطاقةُ «برقمٍ فقط» ──────────────
+     ولّد سميرٌ حزمةً بلا كلمة مرور فنزلت البطاقاتُ ومعها كلماتٌ مطبوعة
+     (`16n991` …) لا تُطلب ولا تُقارَن — تُربك البائعَ والزبون. الآن يُعطَّل
+     الحقلان بصريًّا ومنطقيًّا، والخادمُ يُصفّر الطولَ على كلّ حال فلا يعتمد
+     السلوكُ على جافاسكربت. */
+  var lwp = document.getElementById('lwp');
+  if (lwp) {
+    var pwFields = document.querySelectorAll('[data-pw-field]');
+    var syncPw = function(){
+      var off = !!lwp.checked;
+      pwFields.forEach(function(f){
+        f.style.opacity = off ? '0.45' : '';
+        f.querySelectorAll('input, select').forEach(function(el){
+          el.disabled = off;
+        });
+      });
+    };
+    lwp.addEventListener('change', syncPw);
+    syncPw();
+  }
+})();
+</script>
