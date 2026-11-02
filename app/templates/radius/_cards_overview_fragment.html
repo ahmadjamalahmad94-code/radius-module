@@ -2,6 +2,8 @@
    (‎/cards/overview?fragment=1‎؛ طلب المالك 2026-11-02). نفسُ أقسام الصفحة
    المستقلّة، بلا الهيرو (لصفحة الحزم عدّاداتُها) وبلا «آخر 5 دفعات» (القائمةُ فوقها). #}
 <div class="cards-overview cards-overview--embed">
+{#- (02/11) أسفل صفحة الحزم: المبيعات وحدها -#}
+{% set sales_only = true %}
 {% include "radius/_cards_overview_body.html" %}
 </div>
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

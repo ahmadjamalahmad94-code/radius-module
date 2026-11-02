@@ -33,6 +33,25 @@
   .batches-overview__head h2 i{ color: var(--hub-brand, #2BAACC); margin-inline-end:6px; }
   .batches-overview__status{ padding: 18px; text-align:center; color: var(--hub-text-mute, #64748b);
     border:1px dashed var(--hub-border, #e2e8f0); border-radius: var(--hub-r-card, 14px); background:#fff; }
+  /* (02/11) أسفل الحزم المبيعاتُ وحدها ومضغوطة: عنوانٌ واحد (عنوان القسم وعنوان اللوح
+     مكرّران مع «مبيعات الكروت» فوقهما)، وحشوٌ أقلّ في كلّ طبقة. الصفحة المستقلّة كما هي. */
+  .batches-overview .cards-overview--embed .hub-section-head,
+  .batches-overview .cards-overview--embed .co-sales-board-head{ display:none; }
+  .batches-overview .cards-overview--embed .hub-section{ margin:0; }
+  .batches-overview .cards-overview--embed .hub-section-body{ padding:0; }
+  .batches-overview .cards-overview--embed .co-sales-summary{ grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); }
+  .batches-overview .cards-overview--embed .co-sales-summary-item{ padding:9px 14px; }
+  .batches-overview .cards-overview--embed .co-sales-performance-head{ padding:8px 14px; }
+  .batches-overview .cards-overview--embed .co-sales-lane{ gap:8px; padding:10px 12px; }
+  .batches-overview .cards-overview--embed .co-sales-metric{ gap:2px; padding:6px 8px; }
+  .batches-overview .cards-overview--embed .co-sales-link{ min-height:28px; padding:4px 8px; }
+  @media (max-width: 720px){
+    /* على الجوّال: الفترات الأربع عمودان لا عمودٌ طويل */
+    .batches-overview .cards-overview--embed .co-sales-periods{ grid-template-columns:1fr 1fr; }
+    .batches-overview .cards-overview--embed .co-sales-lane{ padding:8px; gap:6px; }
+    .batches-overview .cards-overview--embed .co-sales-metrics{ gap:4px; }
+    .batches-overview .cards-overview--embed .co-sales-metric{ padding:4px 6px; }
+  }
 </style>
 <style>
   /* نافذة «إنشاء حزمة» بالنموذج الكامل: أعرض من المختصرة، والرأسُ ثابتٌ فوق
@@ -912,7 +931,7 @@
   <section class="batches-overview" aria-labelledby="batchesOverviewTitle" aria-busy="true"
            data-overview-src="{{ url_for('radius.cards_overview', fragment='1') }}">
     <header class="batches-overview__head">
-      <h2 id="batchesOverviewTitle"><i class="fa-solid fa-chart-pie"></i> {{ _('نظرة عامة') }}</h2>
+      <h2 id="batchesOverviewTitle"><i class="fa-solid fa-receipt"></i> {{ _('مبيعات الكروت') }}</h2>
     </header>
     <div class="batches-overview__body" data-overview-body>
       <p class="batches-overview__status" data-overview-status>

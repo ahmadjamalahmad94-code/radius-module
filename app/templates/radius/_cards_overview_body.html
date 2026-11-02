@@ -187,6 +187,8 @@
 {% endcall %}
 </div>
 
+{#- أسفل صفحة الحزم: المبيعات وحدها (طلب المالك 02/11)؛ الصفحة المستقلّة تعرض الكلّ. -#}
+{% if not sales_only %}
 {% call hub.section(_('تنبيهات مختصرة'), icon="bell") %}
     <div class="co-alerts">
       {% for alert in alerts %}
@@ -290,6 +292,7 @@
     {{ hub.empty(_('لا يوجد مخزون بعد'), sub=_('بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.'), icon="box-open") }}
   {% endif %}
 {% endcall %}
+{% endif %}
 
 <script>
 (() => {

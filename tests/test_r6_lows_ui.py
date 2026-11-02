@@ -68,7 +68,8 @@ def test_arabic_in_bare_monospace_falls_back_to_cairo():
 
 
 def test_escape_closes_sales_and_import_modals():
-    ov = _read("app/templates/radius/cards_overview.html")
+    # (02/11) the overview sections + their script live in the shared partial (page + batches embed)
+    ov = _read("app/templates/radius/_cards_overview_body.html")
     assert re.search(r'event\.key !== "Escape".*?\.co-sales-modal:target.*?window\.location\.hash = ""', ov, re.S)
     imp = _read("app/static/js/mt_import.js")
     assert re.search(r"e\.key !== 'Escape' \|\| !overlay \|\| overlay\.style\.display === 'none'\) return;\s*e\.preventDefault\(\);\s*close\(\);", imp)
