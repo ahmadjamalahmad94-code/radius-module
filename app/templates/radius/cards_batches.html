@@ -51,6 +51,12 @@
     background: var(--hub-bg-soft, #f8fafc);
   }
   .cg-form--embed{ max-width: none; }
+  /* ثلاثةُ أزرارٍ ومفتاحُ العرض لا تتّسع لسطرٍ واحدٍ على الهاتف (أُضيف «فحص
+     بطاقة»): الأزرارُ سطرٌ، ومفتاحُ «جدول/بطاقات» سطرٌ تحتها بعرضٍ كامل. */
+  @media (max-width: 720px){
+    .batches-hero__actions{ flex-wrap: wrap; }
+    .batches-hero__actions .view-toggle--hero{ flex: 1 1 100%; display: flex; justify-content: center; }
+  }
   /* على الجوّال تملأ النافذةُ الشاشة — الهوامشُ تأكل عرضًا لا يملكه الهاتف. */
   @media (max-width: 720px){
     .quick-batch-modal--full{ padding: 0; }
