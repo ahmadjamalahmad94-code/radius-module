@@ -733,7 +733,13 @@
              sub=(profile.n_sessions|string + _(' جلسة'))) }}
   {{ hub.kpi(_('المتبقّي'),      fmt_bytes_mb(profile.remaining_mb) if profile.quota_total_mb else "—",
              icon="hourglass-half", variant="red" if profile.quota_total_mb else "blue") }}
+  {%- if wallet_on %}
   {{ hub.kpi(_('الرصيد'),        (profile.balance or 0)|money, icon="coins",    variant="green") }}
+  {%- else %}
+  {# المحفظة معطّلة: الرصيد السالب = دين؛ لا رصيد موجب يُعرض. #}
+  {{ hub.kpi(_('الدين'),         ([0, -(profile.balance or 0)]|max)|money, icon="file-invoice-dollar",
+             variant=("red" if (profile.balance or 0) < 0 else "green")) }}
+  {%- endif %}
 </div>
 
 
@@ -884,7 +890,8 @@
         <div class="row"><span class="k">{{ _('حد الاتصال اليومي') }}</span><span class="v">{{ sub.daily_connection_time_min|dur_days }}</span></div>
         <div class="row"><span class="k">{{ _('أيام العمل') }}</span><span class="v">{{ sub.working_days or "—" }}</span></div>
         <div class="row"><span class="k">{{ _('MACs المسموحة') }}</span><span class="v mono">{{ sub.allowed_macs or "—" }}</span></div>
-        <div class="row"><span class="k">{{ _('الرصيد') }}</span><span class="v">{{ (sub.balance or 0)|money }}</span></div>
+        {% if wallet_on %}<div class="row"><span class="k">{{ _('الرصيد') }}</span><span class="v">{{ (sub.balance or 0)|money }}</span></div>
+        {% else %}<div class="row"><span class="k">{{ _('الدين') }}</span><span class="v">{{ ([0, -(sub.balance or 0)]|max)|money }}</span></div>{% endif %}
         <div class="row"><span class="k">{{ _('المرجع المالي') }}</span><span class="v">{{ sub.payment_reference or "—" }}</span></div>
         <div class="row"><span class="k">{{ _('طريقة الدفع') }}</span><span class="v">
           {%- if sub.payment_method -%}{{ L.ident(L.pay_method(sub.payment_method), sub.payment_method) }}{%- else -%}—{%- endif -%}

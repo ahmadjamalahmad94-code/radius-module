@@ -44,7 +44,7 @@ from ...radius.services.subscriber_action_flags import WEB_ENDPOINT  # noqa: E40
 _FORBIDDEN_AR = N_("ليس لديك صلاحية لتنفيذ هذا الإجراء.")
 _MAX_FREE_LOAN_HOURS_DEFAULT = 72
 _PAYMENT_METHODS = ("cash", "bank", "manual")
-_CHARGE_MODES = ("free", "paid", "debt")
+_CHARGE_MODES = ("free", "cash", "paid", "debt")   # cash = قُبض الآن؛ paid = من المحفظة
 
 # Service messages are Arabic at the source now; the ONE shared translation layer
 # (core/messages_ar) also serves the web flashes, so web and app show the same text.
@@ -497,9 +497,9 @@ def action_extend(username: str):
     mode = str(body.get("mode") or ("expire_at" if body.get("expire_at") else "duration")).strip()
     if mode not in {"duration", "expire_at"}:
         return _invalid(_tr("طريقة التحديد غير معروفة (duration أو expire_at)."))
-    charge_mode = str(body.get("charge_mode") or "free").strip()
+    charge_mode = _mode(body)
     if charge_mode not in _CHARGE_MODES:
-        return _invalid(_tr("طريقة الإضافة غير معروفة (free أو paid أو debt)."))
+        return _invalid(_tr("طريقة الإضافة غير معروفة (free أو cash أو paid أو debt)."))
     try:
         if mode == "expire_at":
             expire_at = _parse_expire_at(body.get("expire_at"))
@@ -546,7 +546,7 @@ def action_extend(username: str):
         "username": username,
         "mode": mode,
         "new_expire_at": _iso_z(saved.expire_at),
-        "charged_amount": amount if charge_mode in {"paid", "debt"} else 0.0,
+        "charged_amount": amount if charge_mode in {"cash", "paid", "debt"} else 0.0,
         "charge_mode": charge_mode,
         "balance": float(saved.balance or 0),
     })
@@ -581,8 +581,14 @@ def action_change_plan(username: str):
     })
 
 
+def _mode(body: dict) -> str:
+    """«paid» من نسخةٍ قديمة والمحفظة معطّلة ⇒ «cash» (normalize_charge_mode)."""
+    from ...radius.services.users import normalize_charge_mode
+    return normalize_charge_mode(body.get("charge_mode"))
+
+
 def _charge(body: dict) -> tuple[str, float, str]:
-    charge_mode = str(body.get("charge_mode") or "free").strip()
+    charge_mode = _mode(body)
     if charge_mode not in _CHARGE_MODES:
         raise ValueError("charge_mode")
     amount = _num(body.get("amount"), field="amount")

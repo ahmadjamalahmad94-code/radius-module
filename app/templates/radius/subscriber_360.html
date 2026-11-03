@@ -44,7 +44,7 @@
   {# C2: الرصيد والماليّات محجوبة عن المدير غير المُصرَّح (can_see_balance) —
      القيمة لا تُصيَّر أصلًا في الاستجابة (server-side)، السوبر يَراها دائمًا. #}
   {% if manager_can_see is not defined or manager_can_see('can_see_balance') %}
-  {{ hub.kpi(_('رصيد المحفظة'), financial.wallet_balance|money, icon="wallet", variant="blue") }}
+  {% if wallet_on %}{{ hub.kpi(_('رصيد المحفظة'), financial.wallet_balance|money, icon="wallet", variant="blue") }}{% endif %}
   {{ hub.kpi(_('إجمالي المدفوع'), financial.total_paid|money, icon="cash-register", variant="green") }}
   {{ hub.kpi(_('سلف مفتوحة'), financial.open_loan_amount|money, icon="hand-holding-dollar", variant="amber") }}
   {# الدين المفتوح = دين الرصيد السالب (تمديد/كوتة على الدين، فرق تغيير العرض) + متبقّي السلف. #}

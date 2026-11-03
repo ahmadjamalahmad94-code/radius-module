@@ -1160,7 +1160,10 @@ def _install_stubs(app: Flask) -> None:
     def _inject_system_config():
         try:
             from app.radius.core.system_config import system_config
-            return {"cfg": system_config()}
+            _c = system_config()
+            # wallet_on: «محفظة المشترك» مفعّلة (معطّلة افتراضيًّا) — كلّ ما يخصّ
+            # الرصيد المسبق في القوالب يُعرض تحتها فقط.
+            return {"cfg": _c, "wallet_on": bool(_c.get("wallet_enabled"))}
         except Exception:  # noqa: BLE001 — never break a page on config read
             # اشتقّ عملة الاحتياط من الإعداد الافتراضي الموحّد بدل تثبيت JOD هنا.
             from app.radius.core.system_config import (
@@ -1172,7 +1175,8 @@ def _install_stubs(app: Flask) -> None:
                             "currency_name": CURRENCY_NAMES.get(cur, cur),
                             "tz_offset": 3.0, "tz_name": _DEFAULTS.get("billing.timezone", "Asia/Gaza"),
                             "system_name": "HobeRadius", "country": "",
-                            "logo_url": "", "primary_color": "#2BAACC"}}
+                            "logo_url": "", "primary_color": "#2BAACC"},
+                    "wallet_on": False}
 
     from app.radius.core.system_config import (
         format_duration_days as _dur_days,

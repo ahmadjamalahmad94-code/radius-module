@@ -88,9 +88,12 @@
     </a>
   '|safe,
   kpis=[
-    {'label': _('الرصيد الحالي'), 'value': (sub.balance or 0)|money, 'icon': 'scale-balanced',
+    ({'label': _('الرصيد الحالي'), 'value': (sub.balance or 0)|money, 'icon': 'scale-balanced',
      'variant': ('red' if (sub.balance or 0) < 0 else 'green'),
-     'sub': (_('عليه دين') if (sub.balance or 0) < 0 else _('رصيد دائن'))},
+     'sub': (_('عليه دين') if (sub.balance or 0) < 0 else _('رصيد دائن'))} if wallet_on else
+     {'label': _('الدين'), 'value': ([0, -(sub.balance or 0)]|max)|money, 'icon': 'file-invoice-dollar',
+     'variant': ('red' if (sub.balance or 0) < 0 else 'green'),
+     'sub': (_('عليه دين') if (sub.balance or 0) < 0 else _('لا دين'))}),
     {'label': _('سعر الباقة الفعّال'), 'value': eff_price|money, 'icon': 'tag',
      'variant': 'brand', 'sub': (_('سعر مخصّص') if price_custom else _('سعر العرض'))},
     {'label': _('الدفعات'), 'value': payments|length, 'icon': 'receipt', 'variant': 'blue'},
@@ -107,6 +110,11 @@
   <button class="hub-btn hub-btn--secondary" type="button" data-ff-open="loan" data-uds-modal-open="ff-loan">
     <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}
   </button>
+  {% if (sub.balance or 0) < 0 %}
+  <button class="hub-btn hub-btn--secondary" type="button" data-uds-modal-open="ff-debt">
+    <i class="fa-solid fa-file-invoice-dollar"></i> {{ _('تسديد دين') }}
+  </button>
+  {% endif %}
 </div>
 
 {% if payments %}
@@ -236,7 +244,7 @@
         <div class="ff-current">
           <div><span>{{ _('المشترك') }}</span><strong>{{ sub.username }}</strong></div>
           <div><span>{{ _('سعر الباقة') }}</span><strong>{{ eff_price|money }}</strong></div>
-          <div><span>{{ _('الرصيد') }}</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
+          {% if wallet_on %}<div><span>{{ _('الرصيد') }}</span><strong>{{ (sub.balance or 0)|money }}</strong></div>{% else %}<div><span>{{ _('الدين') }}</span><strong>{{ ([0, -(sub.balance or 0)]|max)|money }}</strong></div>{% endif %}
         </div>
         <div class="ff-grid">
           <label class="ff-field">{{ _('المبلغ') }}
@@ -292,6 +300,41 @@
   </div>
 </div>
 
+{# ───────────── نافذة موحّدة (uds-modal): تسديد دين ─────────────
+   قرار المالك 2026-11-03: الدين يظهر «عليه دين» مع زر تسديد — يُدفع كاش، والمبلغ
+   لا يتجاوز الدين (الخادم يقصّه أيضًا)، فلا ينشأ رصيدٌ موجب من هنا. #}
+{% if (sub.balance or 0) < 0 %}
+{% set _debt_due = -(sub.balance or 0) %}
+<div class="uds-modal" id="ff-debt" data-uds-modal hidden>
+  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('تسديد دين') }}">
+    <form method="post" action="{{ url_for('radius.users_balance_add', username=sub.username) }}">{% if not can_submit('radius.users_balance_add') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
+      {{ csrf_token_input() | safe }}
+      <input type="hidden" name="purpose" value="debt">
+      <div class="uds-modal-head"><h3><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('تسديد دين') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="uds-modal-body">
+        <div class="ff-current">
+          <div><span>{{ _('المشترك') }}</span><strong>{{ sub.username }}</strong></div>
+          <div><span>{{ _('عليه دين') }}</span><strong>{{ _debt_due|money }}</strong></div>
+        </div>
+        <div class="ff-grid">
+          <label class="ff-field">{{ _('المبلغ المدفوع (كاش)') }}
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" max="{{ '%.2f'|format(_debt_due) }}" value="{{ '%.2f'|format(_debt_due) }}" required>
+          </label>
+          <label class="ff-field">{{ _('ملاحظات') }}
+            <input class="hub-input" name="notes" maxlength="200">
+          </label>
+        </div>
+        <div class="ff-hint">{{ _('يمكن التسديد على دفعات — المبلغ لا يتجاوز الدين.') }}</div>
+      </div>
+      <div class="uds-modal-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('تسديد') }}</button>
+      </div>
+    {% if not can_submit('radius.users_balance_add') %}</fieldset>{% endif %}</form>
+  </div>
+</div>
+{% endif %}
+
 {# ───────────── نافذة موحّدة (uds-modal): منح سلفة ───────────── #}
 <div class="uds-modal" id="ff-loan" data-uds-modal data-ff-modal="loan" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('منح سلفة') }}">
@@ -304,7 +347,7 @@
         <div class="ff-current">
           <div><span>{{ _('المشترك') }}</span><strong>{{ sub.username }}</strong></div>
           <div><span>{{ _('سعر الباقة') }}</span><strong>{{ eff_price|money }}</strong></div>
-          <div><span>{{ _('الرصيد') }}</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
+          {% if wallet_on %}<div><span>{{ _('الرصيد') }}</span><strong>{{ (sub.balance or 0)|money }}</strong></div>{% else %}<div><span>{{ _('الدين') }}</span><strong>{{ ([0, -(sub.balance or 0)]|max)|money }}</strong></div>{% endif %}
         </div>
         <div class="ff-field wide">{{ _('نوع السلفة') }}
           <div class="ff-seg">

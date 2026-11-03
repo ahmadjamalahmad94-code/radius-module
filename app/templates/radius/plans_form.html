@@ -732,7 +732,8 @@
             <select class="hub-select" name="auto_renew_mode">
               <option value="off" {% if _arm == 'off' %}selected{% endif %}>{{ _('بدون') }}</option>
               <option value="debt" {% if _arm == 'debt' %}selected{% endif %}>{{ _('مسموح بالدين') }}</option>
-              <option value="balance" {% if _arm == 'balance' %}selected{% endif %}>{{ _('خصم من الرصيد المتاح') }}</option>
+              {# المحفظة معطّلة ⇒ «من الرصيد» يُخفى، إلّا لعرضٍ مضبوطٍ عليه سلفًا (لا يتغيّر بصمت عند الحفظ). #}
+              {% if wallet_on or _arm == 'balance' %}<option value="balance" {% if _arm == 'balance' %}selected{% endif %}>{{ _('خصم من الرصيد المتاح') }}</option>{% endif %}
               <option value="free" {% if _arm == 'free' %}selected{% endif %}>{{ _('مجاني') }}</option>
             </select>
             <div class="help">{{ _('عند انتهاء اشتراك المشترك يُجدَّد تلقائيًا بمدة الباقة: بالدين، أو خصمًا من رصيده إن كفى (وإلا ينتهي ويُنبَّه المدراء)، أو مجانًا.') }}</div></div>

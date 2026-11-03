@@ -1518,27 +1518,35 @@
         </div>
         <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الإضافة') }}
           <div class="usq-seg" style="margin-top:4px">
-            <label data-usq-charge-seg="free" class="is-active">
+            <label data-usq-charge-seg="free">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
-              <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
+              <input type="radio" name="charge_mode" value="free" data-usq-charge-input>
               <span><strong>{{ _('مجاني') }}</strong><small>{{ _('إضافة وقت بدون مقابل مالي.') }}</small></span>
             </label>
-            <label data-usq-charge-seg="paid">
+            {# قرار المالك 2026-11-03: الافتراضيّ دفع فوري — كاش / دين، و«محفظة» حين تُفعَّل من الإعدادات. #}
+            <label data-usq-charge-seg="cash" class="is-active">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
-              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
+              <input type="radio" name="charge_mode" value="cash" checked data-usq-charge-input>
+              <span><strong>{{ _('كاش') }}</strong><small>{{ _('المبلغ انقبض الآن.') }}</small></span>
             </label>
+            {% if wallet_on %}
+            <label data-usq-charge-seg="paid">
+              <i class="fa-solid fa-wallet usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
+              <span><strong>{{ _('محفظة') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
+            </label>
+            {% endif %}
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
+              <span><strong>{{ _('دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            {{ _('إضافة وقت مجانية بدون أي قيمة مالية.') }}
+            {{ _('وقت مدفوع كاش — المبلغ انقبض الآن نقدًا.') }}
           </div>
         </div>
-        <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
+        <div class="usq-form-grid usq-reveal" data-usq-paid-only style="margin-top:4px">
           <label class="usq-field">{{ _('السعر (يُحتسب تلقائيًا)') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-extend-amount readonly title="{{ _('سعر الوقت المُضاف حسب سعر العرض/المخصّص') }}">
           </label>
@@ -1650,27 +1658,35 @@
         </div>
         <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الإضافة') }}
           <div class="usq-seg" style="margin-top:4px">
-            <label data-usq-charge-seg="free" class="is-active">
+            <label data-usq-charge-seg="free">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
-              <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
+              <input type="radio" name="charge_mode" value="free" data-usq-charge-input>
               <span><strong>{{ _('مجاني') }}</strong><small>{{ _('بدون أي مقابل مالي.') }}</small></span>
             </label>
-            <label data-usq-charge-seg="paid">
+            {# قرار المالك 2026-11-03: الافتراضيّ دفع فوري — كاش / دين، و«محفظة» حين تُفعَّل من الإعدادات. #}
+            <label data-usq-charge-seg="cash" class="is-active">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
-              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
+              <input type="radio" name="charge_mode" value="cash" checked data-usq-charge-input>
+              <span><strong>{{ _('كاش') }}</strong><small>{{ _('المبلغ انقبض الآن.') }}</small></span>
             </label>
+            {% if wallet_on %}
+            <label data-usq-charge-seg="paid">
+              <i class="fa-solid fa-wallet usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
+              <span><strong>{{ _('محفظة') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
+            </label>
+            {% endif %}
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
+              <span><strong>{{ _('دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            {{ _('كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.') }}
+            {{ _('كوتة مدفوعة كاش — المبلغ انقبض الآن نقدًا.') }}
           </div>
         </div>
-        <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
+        <div class="usq-form-grid usq-reveal" data-usq-paid-only style="margin-top:4px">
           <label class="usq-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
@@ -1720,27 +1736,35 @@
         </p>
         <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الاستعادة') }}
           <div class="usq-seg" style="margin-top:4px">
-            <label data-usq-charge-seg="free" class="is-active">
+            <label data-usq-charge-seg="free">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
-              <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
+              <input type="radio" name="charge_mode" value="free" data-usq-charge-input>
               <span><strong>{{ _('مجاني') }}</strong><small>{{ _('تجديد بدون أي مقابل مالي.') }}</small></span>
             </label>
-            <label data-usq-charge-seg="paid">
+            {# قرار المالك 2026-11-03: الافتراضيّ دفع فوري — كاش / دين، و«محفظة» حين تُفعَّل من الإعدادات. #}
+            <label data-usq-charge-seg="cash" class="is-active">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
-              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
+              <input type="radio" name="charge_mode" value="cash" checked data-usq-charge-input>
+              <span><strong>{{ _('كاش') }}</strong><small>{{ _('المبلغ انقبض الآن.') }}</small></span>
             </label>
+            {% if wallet_on %}
+            <label data-usq-charge-seg="paid">
+              <i class="fa-solid fa-wallet usq-seg-ico"></i>
+              <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
+              <span><strong>{{ _('محفظة') }}</strong><small>{{ _('تُخصم القيمة من رصيد المشترك.') }}</small></span>
+            </label>
+            {% endif %}
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
-              <span><strong>{{ _('مدفوع — دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
+              <span><strong>{{ _('دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            {{ _('استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.') }}
+            {{ _('استعادة مدفوعة كاش — المبلغ انقبض الآن نقدًا.') }}
           </div>
         </div>
-        <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
+        <div class="usq-form-grid usq-reveal" data-usq-paid-only style="margin-top:4px">
           <label class="usq-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
@@ -2155,7 +2179,7 @@
     // The checked radio (name=charge_mode) is the source of truth posted
     // to the existing handler — no hidden mirror needed.
     const mode = modal.querySelector("input[name='charge_mode']:checked")?.value || "free";
-    const paid = mode === "paid" || mode === "debt";
+    const paid = mode !== "free";   // كاش / محفظة / دين — كلّها بمبلغ
     modal.querySelectorAll("[data-usq-paid-only]").forEach((el) => {
       el.hidden = !paid;
       el.querySelectorAll("input, select").forEach((inp) => {
@@ -2170,18 +2194,21 @@
       const hintMaps = {
         quota: {
           free: {{ _("كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.")|tojson }},
-          paid: {{ _("كوتة مدفوعة — تُخصم قيمتها من رصيد المشترك وتُسجَّل قيدًا مدينًا في سجل القيود.")|tojson }},
-          debt: {{ _("كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها كدين (مدين) على رصيد المشترك.")|tojson }},
+          cash: {{ _("كوتة مدفوعة كاش — المبلغ انقبض الآن نقدًا.")|tojson }},
+          paid: {{ _("كوتة من المحفظة — تُخصم قيمتها من رصيد المشترك.")|tojson }},
+          debt: {{ _("كوتة على الدين — تُضاف الآن وتُسجَّل قيمتها دينًا على المشترك.")|tojson }},
         },
         "quota-reset": {
           free: {{ _("استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.")|tojson }},
-          paid: {{ _("استعادة مدفوعة — تُخصم قيمتها من رصيد المشترك وتُسجَّل قيدًا مدينًا في سجل القيود.")|tojson }},
-          debt: {{ _("استعادة على الدين — تُسجَّل قيمتها كدين (مدين) على رصيد المشترك.")|tojson }},
+          cash: {{ _("استعادة مدفوعة كاش — المبلغ انقبض الآن نقدًا.")|tojson }},
+          paid: {{ _("استعادة من المحفظة — تُخصم قيمتها من رصيد المشترك.")|tojson }},
+          debt: {{ _("استعادة على الدين — تُسجَّل قيمتها دينًا على المشترك.")|tojson }},
         },
         "extend": {
           free: {{ _("إضافة وقت مجانية بدون أي قيمة مالية.")|tojson }},
-          paid: {{ _("وقت مدفوع — تُخصم قيمته من رصيد المشترك وتُسجَّل قيدًا مدينًا في سجل القيود.")|tojson }},
-          debt: {{ _("وقت على الدين — تُسجَّل قيمته كدين (مدين) على رصيد المشترك.")|tojson }},
+          cash: {{ _("وقت مدفوع كاش — المبلغ انقبض الآن نقدًا.")|tojson }},
+          paid: {{ _("وقت من المحفظة — تُخصم قيمته من رصيد المشترك.")|tojson }},
+          debt: {{ _("وقت على الدين — تُسجَّل قيمته دينًا على المشترك.")|tojson }},
         },
       };
       hint.textContent = (hintMaps[scope] || hintMaps.quota)[mode];

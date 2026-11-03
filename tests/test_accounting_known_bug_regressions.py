@@ -162,3 +162,13 @@ def test_bug3_coverage_hint_uses_duration_guard(app, client):
     # it (so a < 1-day package shows ساعة/دقيقة instead of a bald «0 يوم»).
     assert "arDuration" in html
     assert "function arDuration" in html or "arDuration(" in html
+
+
+@pytest.fixture(autouse=True)
+def _wallet_on(app):
+    """هذه الاختبارات تفحص المحفظة («مدفوع» = خصم من رصيد المشترك)، وهي
+    معطّلة افتراضيًّا منذ قرار المالك 2026-11-03 — تُفعَّل هنا صراحةً."""
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.ensure_default_tenant()
+        tenants_repo.set_setting(1, "subscribers.wallet_enabled", "1")

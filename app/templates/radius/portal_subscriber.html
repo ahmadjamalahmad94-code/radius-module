@@ -279,7 +279,7 @@
     <button class="tab is-active" data-tab="overview" id="tab-overview" role="tab" aria-selected="true" aria-controls="pane-overview"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> {{ _('نظرة عامة') }}</button>
     <button class="tab" data-tab="profile" id="tab-profile" role="tab" aria-selected="false" aria-controls="pane-profile"><i class="fa-solid fa-id-card" aria-hidden="true"></i> {{ _('الملف الشخصي') }}</button>
     {% if pf.show_usage %}<button class="tab" data-tab="usage" id="tab-usage" role="tab" aria-selected="false" aria-controls="pane-usage"><i class="fa-solid fa-chart-area" aria-hidden="true"></i> {{ _('الاستخدام') }}</button>{% endif %}
-    {% if pf.show_invoices %}<button class="tab" data-tab="billing" id="tab-billing" role="tab" aria-selected="false" aria-controls="pane-billing"><i class="fa-solid fa-receipt" aria-hidden="true"></i> {{ _('الفواتير والمحفظة') }}</button>{% endif %}
+    {% if pf.show_invoices %}<button class="tab" data-tab="billing" id="tab-billing" role="tab" aria-selected="false" aria-controls="pane-billing"><i class="fa-solid fa-receipt" aria-hidden="true"></i> {{ _('الفواتير والمحفظة') if wallet_on else _('الفواتير') }}</button>{% endif %}
     {% if pf_requests %}<button class="tab" data-tab="requests" id="tab-requests" role="tab" aria-selected="false" aria-controls="pane-requests"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> {{ _('الطلبات والدعم') }}</button>{% endif %}
     {% if pf.allow_data_connection %}<button class="tab" data-tab="data" id="tab-data" role="tab" aria-selected="false" aria-controls="pane-data"><i class="fa-solid fa-network-wired" aria-hidden="true"></i> {{ _('اتصال بيانات') }}</button>{% endif %}
   </nav>
@@ -470,9 +470,11 @@
   {% if pf.show_invoices %}
   <section class="pane" data-pane="billing" id="pane-billing" role="tabpanel" aria-labelledby="tab-billing" tabindex="0">
     <div class="hub-kpi-grid">
+      {% if wallet_on %}
       {{ hub.kpi(_('رصيد المحفظة'),
                  (dashboard.wallet.balance|money if dashboard.wallet and dashboard.wallet.balance is defined else '0.00'),
                  icon="wallet", variant="green") }}
+      {% endif %}
       {{ hub.kpi(_('الدين المستحق'), (dashboard.debt or 0)|money,
                  icon="money-bill-trend-up",
                  variant=('red' if dashboard.debt and dashboard.debt > 0 else 'brand')) }}

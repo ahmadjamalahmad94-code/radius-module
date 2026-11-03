@@ -497,3 +497,13 @@ def test_web_money_forms_show_the_cap_reason_not_a_generic_error(client):
     msgs = _flashes(client)
     assert sum("الحدّ الأقصى للعملية الواحدة" in m for m in msgs) == 2, msgs
     assert float(_get(s.username).balance or 0) == 0.0
+
+
+@pytest.fixture(autouse=True)
+def _wallet_on(app):
+    """هذه الاختبارات تفحص المحفظة («مدفوع» = خصم من رصيد المشترك)، وهي
+    معطّلة افتراضيًّا منذ قرار المالك 2026-11-03 — تُفعَّل هنا صراحةً."""
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.ensure_default_tenant()
+        tenants_repo.set_setting(1, "subscribers.wallet_enabled", "1")

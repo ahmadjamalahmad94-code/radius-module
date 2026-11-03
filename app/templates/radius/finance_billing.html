@@ -102,7 +102,8 @@
     <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">{{ _('ملغاة') }}</a>
   </div>
   <span class="hub-spacer"></span>
-  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-modal-open="voucherRedeem"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('صرف كوبون') }}</button>
+  {# صرف الكوبون يُضيف قيمته لرصيد المشترك ⇒ مع المحفظة فقط. #}
+  {% if wallet_on %}<button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-modal-open="voucherRedeem"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('صرف كوبون') }}</button>{% endif %}
   <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> {{ _('توليد كوبونات') }}</button>
   {% endif %}
 {% endcall %}
