@@ -269,13 +269,13 @@ REST API لإدارة المشتركين والباقات والبطاقات و�
 "# يتطلب توكنًا خاصًّا بهذه المجموعة (انظر ملاحظة المصادقة بالأعلى)
 ",,,,,,"missing: en,fr,tr,es",app/api/openapi.py:419
 هذه النقطة غير مربوطة بصلاحية بعد — متاحة للمالك فقط. راجع المالك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:55
-ضبط السرعات جماعيًّا,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:727
-تعديلات عامّة جماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:729
-اختبار المصادقة,,Authentication test,Test d'authentification,Kimlik doğrulama testi,Prueba de autenticación,ok,app/api/permission_guard.py:731
-سجلّ الراديوس,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:733
-الصيانة الجماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:735
-تنقصك الصلاحية: %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:822
-هذا الإجراء مقصور على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:825
+ضبط السرعات جماعيًّا,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:728
+تعديلات عامّة جماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:730
+اختبار المصادقة,,Authentication test,Test d'authentification,Kimlik doğrulama testi,Prueba de autenticación,ok,app/api/permission_guard.py:732
+سجلّ الراديوس,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:734
+الصيانة الجماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:736
+تنقصك الصلاحية: %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:823
+هذا الإجراء مقصور على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:826
 العملية %(operation)s مُسجَّلة كـ contract لكن منطقها لم يكتمل بعد.,,,,,,"missing: en,fr,tr,es",app/api/responses.py:58
 نوع حدث المحاسبة (status_type) مفقود أو غير مدعوم.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:31
 معرّف الجلسة (acct_session_id) مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:32
@@ -1033,9 +1033,10 @@ entry %(entry_id)s غير موجود,,,,,,"missing: en,fr,tr,es",app/api/v1/netw
 منح/سحب الشراكة («شريك/مالك») ودور «مدير عام»,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:44
 لا يمكن حذف المالك الأصليّ للشبكة.,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:177
 حساب المالك الأصليّ محميّ — لا يعدّله إلّا صاحبه.,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:178
-لا يمكنك تعديل حساب المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:183
-لا يمكنك إسناد دورٍ يحمل صلاحيات لا تملكها: ,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:191
-لا يمكنك منح صلاحيات لا تملكها: ,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:201
+منح صلاحيات المالك (شريك) مقصورٌ على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:183
+لا يمكنك تعديل حساب المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:185
+لا يمكنك إسناد دورٍ يحمل صلاحيات لا تملكها: ,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:193
+لا يمكنك منح صلاحيات لا تملكها: ,,,,,,"missing: en,fr,tr,es",app/radius/auth/owner.py:203
 عائلة شبكة العمليّات (التجريبية),,,,,,"missing: en,fr,tr,es",app/radius/auth/section_flags.py:58
 بطاقات «تابع أجهزة الشبكة»/«مسح الشبكة»/«تنبيهات Telegram» — أُخفِيت مؤقتاً حتى اكتمال صقل التجربة. كانت مساراتها قابلة للوصول المباشر قبل هذا الإصلاح.,,,,,,"missing: en,fr,tr,es",app/radius/auth/section_flags.py:59
 دفع بيانات التوزيع (DHCP push),,,,,,"missing: en,fr,tr,es",app/radius/auth/section_flags.py:73
@@ -1659,24 +1660,26 @@ Manual — قائمة سماح يدوية (افتراضي رفض),,,,,,"missing:
 لا أسعار خاصة لهذا المدير أصلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admin_pricing.py:97
 تمت استعادة الكل — أُزيل %(removed)s سعرًا خاصًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admin_pricing.py:105
 لا أسعار خاصة مسجَّلة أصلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admin_pricing.py:107
-الدور المحدد غير موجود — اختر دورًا للمدير.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:177
-منح صلاحيات المالك (شريك) أو «سوبر يوزر» مقصورٌ على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:183
-تم إنشاء المدير «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:222
-تم التحديث.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:316
-تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:334
-تم تحديث الصلاحيات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:361
-لم يُحفَظ الدور,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:434
- — لم يُحفَظ شيء.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:435
-صلاحيات غير معروفة: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:435
-رجوع إلى الدور,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:436
-تم إنشاء الدور «%(name)s» ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:458
-تم حفظ التعديلات ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:532
-لا يمكن أرشفة دور النظام.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:543
-لا يمكن حذف الدور,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:551
-لا يمكن حذف الدور «%(name)s»: مُسنَد إلى %(in_use)s مدير. انقلهم إلى دورٍ آخر أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:552
-قائمة الأدوار,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:553
-تمت أرشفة الدور «%(name)s» ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:557
-تم حفظ أساس صلاحيات الدور «%(name)s» — يَرثه كلّ مدير بهذا الدور ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:587
+الرصيد الافتتاحيّ ليس رقمًا — أُنشئ المدير بلا رصيد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:171
+لا تملك «شحن محفظة مشغّل» — أُنشئ المدير بلا رصيد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:178
+أُنشئ المدير لكن تعذّر شحن رصيده: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:188
+اختر المسمّى الوظيفي للمدير — منه وحده تأتي صلاحياته.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:206
+تم إنشاء المدير «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:252
+تم التحديث.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:346
+تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:364
+تم تحديث الصلاحيات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:391
+لم يُحفَظ الدور,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:464
+ — لم يُحفَظ شيء.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:465
+صلاحيات غير معروفة: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:465
+رجوع إلى الدور,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:466
+تم إنشاء الدور «%(name)s» ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:488
+تم حفظ التعديلات ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:562
+لا يمكن أرشفة دور النظام.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:573
+لا يمكن حذف الدور,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:581
+لا يمكن حذف الدور «%(name)s»: مُسنَد إلى %(in_use)s مدير. انقلهم إلى دورٍ آخر أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:582
+قائمة الأدوار,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:583
+تمت أرشفة الدور «%(name)s» ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:587
+تم حفظ أساس صلاحيات الدور «%(name)s» — يَرثه كلّ مدير بهذا الدور ✓,,,,,,"missing: en,fr,tr,es",app/radius/routes/admins.py:617
 تم حفظ %(v)s لميزة «منع استنساخ MAC».,,,,,,"missing: en,fr,tr,es",app/radius/routes/anti_mac_clone.py:147
 تعليق,,Comment,Commentaire,Yorum,Comentario,ok,app/radius/routes/anti_mac_clone.py:169
 وسم كمستبدَل,,,,,,"missing: en,fr,tr,es",app/radius/routes/anti_mac_clone.py:170
@@ -2017,13 +2020,13 @@ card_id مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:2082
 لا تملك صلاحية %s. اطلب من المالك منحها لك من صفحة صلاحيّاتك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3511
 تم إنشاء العرض.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3549
 تم تحديث العرض.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3606
-تم تحديث قائمة المشاركة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3618
-تم تحديث حالة العرض.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3631
-عدد البطاقات يجب أن يكون أكبر من صفر.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3662
-اختر خطّة للحزمة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3727
-توليد حزمة من العرض «%(v)s» (%(count)s بطاقة),,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3752
-استرجاع: فشل توليد الحزمة من العرض,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3768
-تم إنشاء دفعة «%(batch_code)s» — %(v)s. خُصم %(v2)s جملةً (هامش متوقّع %(v3)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3784
+تم تحديث قائمة المشاركة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3621
+تم تحديث حالة العرض.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3637
+عدد البطاقات يجب أن يكون أكبر من صفر.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3668
+اختر خطّة للحزمة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3733
+توليد حزمة من العرض «%(v)s» (%(count)s بطاقة),,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3758
+استرجاع: فشل توليد الحزمة من العرض,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3774
+تم إنشاء دفعة «%(batch_code)s» — %(v)s. خُصم %(v2)s جملةً (هامش متوقّع %(v3)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:3790
 اسم الحزمة مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards_print.py:240
 لم يُعثر على أي بطاقة قابلة للاستيراد — راجع النص أو ارفع الملف مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards_print.py:252
 تم استيراد %(v)s طباعة داخل الحزمة «%(batch_code)s».%(skipped_label)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards_print.py:277
@@ -2256,24 +2259,24 @@ IP الخادم غير متوفّر في بيانات التزويد.,,,,,,"miss
 تم تعطيل سياسة الأرشفة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/lifecycle.py:71
 تم تشغيل الأرشفة مع وجود عناصر فشلت. راجع السجل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/lifecycle.py:80
 تمت الأرشفة الآمنة لعدد %(v)s عنصر.,,,,,,"missing: en,fr,tr,es",app/radius/routes/lifecycle.py:82
-الباقة (الحزمة),,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:129
-المشترك,,Subscriber,Abonné,Abone,Abonado,ok,app/radius/routes/manager_distributor_ops.py:129
-لا يمكنك تعديل صلاحياتك بنفسك — يعدّلها المالك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:183
-تم تحديث صلاحيات وحدود المشغل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:304
-لم يُمنَح «مسموح» لما لا تملكه أنت: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:306
-تمت إعادة هذا المدير لوراثة أساس دوره — أُزيلت تجاوزاته الفرديّة (الحدود الرقميّة باقية).,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:321
-تم حفظ قالب الصلاحيات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:341
-تم حذف القالب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:350
-تم تطبيق القالب على المدير. يمكنك التعديل الآن.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:360
-اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:387
-منح دور «مدير عام» مقصورٌ على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:414
-تم إنشاء المدير الفرعيّ «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:436
-تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك).,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:523
-مدير محذوف (#%(aid)s),,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:556
-تم اعتماد الطلب وتنفيذه.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:574
-تعذّر تنفيذ الطلب بعد الاعتماد: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:578
-تم رفض الطلب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:586
-تم شحن محفظة المشغل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:601
+الباقة (الحزمة),,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:137
+المشترك,,Subscriber,Abonné,Abone,Abonado,ok,app/radius/routes/manager_distributor_ops.py:137
+لا يمكنك تعديل صلاحياتك بنفسك — يعدّلها المالك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:191
+تم تحديث صلاحيات وحدود المشغل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:317
+لم يُمنَح «مسموح» لما لا تملكه أنت: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:319
+تمت إعادة هذا المدير لوراثة أساس دوره — أُزيلت تجاوزاته الفرديّة (الحدود الرقميّة باقية).,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:334
+تم حفظ قالب الصلاحيات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:354
+تم حذف القالب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:363
+تم تطبيق القالب على المدير. يمكنك التعديل الآن.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:373
+اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:400
+منح دور «مدير عام» مقصورٌ على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:427
+تم إنشاء المدير الفرعيّ «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:449
+تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك).,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:536
+مدير محذوف (#%(aid)s),,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:569
+تم اعتماد الطلب وتنفيذه.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:587
+تعذّر تنفيذ الطلب بعد الاعتماد: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:591
+تم رفض الطلب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:599
+تم شحن محفظة المشغل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/manager_distributor_ops.py:614
 لم يُرفَع أيّ ملف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/migration.py:126
 الملفّ أكبر من الحدّ المسموح (%(mb)sMB). ارفع النسخة المضغوطة .gz أو تفريغًا أصغر.,,,,,,"missing: en,fr,tr,es",app/radius/routes/migration.py:140
 تعذّر حفظ الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/migration.py:143
@@ -6302,12 +6305,12 @@ router_id مطلوب لتشغيل التشخيص.,,,,,,"missing: en,fr,tr,es",ap
 عرض كل المشتركين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1047
 عرض كل حزم البطاقات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1048
 إنشاء مدراء فرعيّين + تفويض,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1053
-ممنوع,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1764
-ينقص الدور المفتاح ,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1832
-مُطفأ في أساس الدور,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1834
-نطاق الرؤية والحماية الماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1883
-غير ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2016
-ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2016
+ممنوع,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1756
+ينقص الدور المفتاح ,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1824
+مُطفأ في أساس الدور,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1826
+نطاق الرؤية والحماية الماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1875
+غير ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2008
+ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2008
 اسم القالب مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_presets.py:71
 يوجد قالبٌ بهذا الاسم.,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_presets.py:77
 # MT74 — دمجٌ لا استبدال: نُضيف بوّابات النفق إلى المسموح حاليًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/mgmt_acl.py:124
@@ -7669,8 +7672,8 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 استخدم الزرّ بالأسفل,,,,,,"missing: en,fr,tr,es",app/radius/services/qr_svg.py:50
 المشترك بلا تاريخ انتهاء (غير محدود) — لم يُغيَّر وقته.,,,,,,"missing: en,fr,tr,es",app/radius/services/radius_apply.py:68
 HOBERADIUS_RADIUS_SECRET غير مضبوط. أضفه إلى ملف البيئة: HOBERADIUS_RADIUS_SECRET=your-secret,,,,,,"missing: en,fr,tr,es",app/radius/services/radius_auth_server.py:64
-استعادة المدراء والأدوار مقصورة على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/services/recycle_restore_policy.py:25
-تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع.,,,,,,"missing: en,fr,tr,es",app/radius/services/recycle_restore_policy.py:56
+استعادة المدراء والأدوار مقصورة على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/radius/services/recycle_restore_policy.py:28
+تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع.,,,,,,"missing: en,fr,tr,es",app/radius/services/recycle_restore_policy.py:59
 الجهاز يحتاج IP محفوظ قبل فتح الجلسة.,,,,,,"missing: en,fr,tr,es",app/radius/services/remote_device_access.py:90
 تعذّر تخصيص منفذ خارجي: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/remote_device_access.py:114
 فشل إنشاء NAT على الراوتر: %(error)s,,,,,,"missing: en,fr,tr,es",app/radius/services/remote_device_access.py:157
@@ -10110,45 +10113,47 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 استيراد حِزم بطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:106
 فحص البطاقات وعملياتها,,Check cards and their operations,Vérifier les cartes et leurs opérations,Kartları ve işlemlerini denetle,Comprobar las tarjetas y sus operaciones,ok,app/templates/radius/_perm_labels.html:107
 استعادة من سلة المحذوفات,,Restore from trash,Restaurer depuis la corbeille,Çöp kutusundan geri yükle,Restaurar de la papelera,ok,app/templates/radius/_perm_labels.html:108
-بطاقات الشحن,,Recharge Vouchers,Coupons de recharge,Yükleme Kuponları,Cupones de recarga,ok,app/templates/radius/_perm_labels.html:109
-حزم طباعة البطاقات,,Card printing packages,Forfaits d'impression de cartes,Kart yazdırma paketleri,Paquetes de impresión de tarjetas,ok,app/templates/radius/_perm_labels.html:110
-عرض الباقات,,View packages,Afficher les forfaits,Paketleri görüntüle,Ver paquetes,ok,app/templates/radius/_perm_labels.html:112
-عرض أسعار المدراء,,View managers' prices,Afficher les tarifs des gestionnaires,Yöneticilerin fiyatlarını görüntüle,Ver precios de los gerentes,ok,app/templates/radius/_perm_labels.html:117
-تعديل سعر مدير خاص,,Edit special manager price,Modifier le prix d'un gestionnaire spécial,Özel yönetici fiyatını düzenle,Editar precio de gestor especial,ok,app/templates/radius/_perm_labels.html:118
-إعادة السعر الرسمي,,Restore official price,Rétablir le prix officiel,Resmi fiyatı geri yükle,Restaurar el precio oficial,ok,app/templates/radius/_perm_labels.html:119
-عرض أجهزة الشبكة,,View network devices,Afficher les appareils réseau,Ağ cihazlarını görüntüle,Ver dispositivos de red,ok,app/templates/radius/_perm_labels.html:121
-تعديل جهاز شبكة,,Edit network device,Modifier l'appareil réseau,Ağ cihazını düzenle,Editar dispositivo de red,ok,app/templates/radius/_perm_labels.html:123
-عرض الراوترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:126
-تسجيل/ربط الراوترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:127
-إعادة تشغيل راوتر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:128
-إعادة ضبط المصنع,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:132
-كشف بيانات الراوتر الحسّاسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:133
-عرض الجلسات,,View sessions,Afficher les sessions,Oturumları görüntüle,Ver sesiones,ok,app/templates/radius/_perm_labels.html:135
-عرض المدراء,,View managers,Afficher les gestionnaires,Yöneticileri görüntüle,Ver gerentes,ok,app/templates/radius/_perm_labels.html:138
-إنشاء مدير,,Create admin,Créer un administrateur,Yönetici oluştur,Crear administrador,ok,app/templates/radius/_perm_labels.html:139
-حذف مدير,,Delete administrator,Supprimer un administrateur,Yöneticiyi sil,Eliminar administrador,ok,app/templates/radius/_perm_labels.html:141
-شحن محفظة مشغّل,,Top up operator wallet,Recharger le portefeuille de l'opérateur,Operatör cüzdanını yükle,Recargar billetera del operador,ok,app/templates/radius/_perm_labels.html:142
-ضبط صلاحيات المشغّلين,,Configure operator permissions,Configurer les autorisations des opérateurs,Operatör izinlerini ayarla,Configurar permisos de operadores,ok,app/templates/radius/_perm_labels.html:143
-عرض التقارير,,View reports,Afficher les rapports,Raporları görüntüle,Ver informes,ok,app/templates/radius/_perm_labels.html:145
-التقارير المالية ودفتر القيود,,Financial reports and ledger,Rapports financiers et grand livre,Mali raporlar ve defter,Informes financieros y libro mayor,ok,app/templates/radius/_perm_labels.html:146
-عرض المتجر الإلكتروني,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:148
-إضافة/إدارة باقة إلكترونية,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:149
-إضافة حساب مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:150
-تعديل مستخدم المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:151
-شحن محفظة مستخدم المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:152
-الشراء بالنيابة عن المستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:153
-حذف/استعادة مستخدم المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:154
-دعم طلبات الشحن (تأكيد الإيداع/السحب),,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:155
-التصرف بمشترك غير تابع له,,Acting on a subscriber not belonging to them,Agir sur un abonné qui ne lui appartient pas,Kendisine ait olmayan bir aboneye işlem yapma,Actuar sobre un suscriptor que no le pertenece,ok,app/templates/radius/_perm_labels.html:157
-رؤية كل المشتركين (مشتركو كل المدراء),,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:158
-رؤية كل المدراء,,View all administrators,Voir tous les administrateurs,Tüm yöneticileri görüntüle,Ver todos los administradores,ok,app/templates/radius/_perm_labels.html:159
-رؤية كل حِزم البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:160
-رؤية تقارير الجميع,,View everyone's reports,Voir les rapports de tous,Herkesin raporlarını görüntüle,Ver los informes de todos,ok,app/templates/radius/_perm_labels.html:161
-كشف كلمات السر,,Reveal passwords,Révéler les mots de passe,Parolaları göster,Revelar contraseñas,ok,app/templates/radius/_perm_labels.html:162
-عرض الإعدادات,,View settings,Afficher les paramètres,Ayarları görüntüle,Ver ajustes,ok,app/templates/radius/_perm_labels.html:164
-تعديل الإعدادات,,Edit settings,Modifier les paramètres,Ayarları düzenle,Editar ajustes,ok,app/templates/radius/_perm_labels.html:165
-عرض سجل التدقيق,,View audit log,Afficher le journal d'audit,Denetim günlüğünü görüntüle,Ver registro de auditoría,ok,app/templates/radius/_perm_labels.html:166
-استخدام الواجهة البرمجية,,Use the API,Utiliser l'API,API'yi kullan,Usar la API,ok,app/templates/radius/_perm_labels.html:167
+حذف نهائيّ للحِزم والبطاقات (بلا رجعة),,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:109
+بطاقات الشحن,,Recharge Vouchers,Coupons de recharge,Yükleme Kuponları,Cupones de recarga,ok,app/templates/radius/_perm_labels.html:110
+حزم طباعة البطاقات,,Card printing packages,Forfaits d'impression de cartes,Kart yazdırma paketleri,Paquetes de impresión de tarjetas,ok,app/templates/radius/_perm_labels.html:111
+عرض الباقات,,View packages,Afficher les forfaits,Paketleri görüntüle,Ver paquetes,ok,app/templates/radius/_perm_labels.html:113
+عرض أسعار المدراء,,View managers' prices,Afficher les tarifs des gestionnaires,Yöneticilerin fiyatlarını görüntüle,Ver precios de los gerentes,ok,app/templates/radius/_perm_labels.html:118
+تعديل سعر مدير خاص,,Edit special manager price,Modifier le prix d'un gestionnaire spécial,Özel yönetici fiyatını düzenle,Editar precio de gestor especial,ok,app/templates/radius/_perm_labels.html:119
+إعادة السعر الرسمي,,Restore official price,Rétablir le prix officiel,Resmi fiyatı geri yükle,Restaurar el precio oficial,ok,app/templates/radius/_perm_labels.html:120
+عرض أجهزة الشبكة,,View network devices,Afficher les appareils réseau,Ağ cihazlarını görüntüle,Ver dispositivos de red,ok,app/templates/radius/_perm_labels.html:122
+تعديل جهاز شبكة,,Edit network device,Modifier l'appareil réseau,Ağ cihazını düzenle,Editar dispositivo de red,ok,app/templates/radius/_perm_labels.html:124
+عرض الراوترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:127
+تسجيل/ربط الراوترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:128
+إعادة تشغيل راوتر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:129
+إعادة ضبط المصنع,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:133
+كشف بيانات الراوتر الحسّاسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:134
+عرض الجلسات,,View sessions,Afficher les sessions,Oturumları görüntüle,Ver sesiones,ok,app/templates/radius/_perm_labels.html:136
+عرض المدراء,,View managers,Afficher les gestionnaires,Yöneticileri görüntüle,Ver gerentes,ok,app/templates/radius/_perm_labels.html:139
+إنشاء مدير,,Create admin,Créer un administrateur,Yönetici oluştur,Crear administrador,ok,app/templates/radius/_perm_labels.html:140
+حذف مدير,,Delete administrator,Supprimer un administrateur,Yöneticiyi sil,Eliminar administrador,ok,app/templates/radius/_perm_labels.html:142
+شحن محفظة مشغّل,,Top up operator wallet,Recharger le portefeuille de l'opérateur,Operatör cüzdanını yükle,Recargar billetera del operador,ok,app/templates/radius/_perm_labels.html:143
+ضبط صلاحيات المشغّلين,,Configure operator permissions,Configurer les autorisations des opérateurs,Operatör izinlerini ayarla,Configurar permisos de operadores,ok,app/templates/radius/_perm_labels.html:144
+سقوف دَين وسلفة المدراء,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:145
+عرض التقارير,,View reports,Afficher les rapports,Raporları görüntüle,Ver informes,ok,app/templates/radius/_perm_labels.html:147
+التقارير المالية ودفتر القيود,,Financial reports and ledger,Rapports financiers et grand livre,Mali raporlar ve defter,Informes financieros y libro mayor,ok,app/templates/radius/_perm_labels.html:148
+عرض المتجر الإلكتروني,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:150
+إضافة/إدارة باقة إلكترونية,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:151
+إضافة حساب مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:152
+تعديل مستخدم المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:153
+شحن محفظة مستخدم المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:154
+الشراء بالنيابة عن المستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:155
+حذف/استعادة مستخدم المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:156
+دعم طلبات الشحن (تأكيد الإيداع/السحب),,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:157
+التصرف بمشترك غير تابع له,,Acting on a subscriber not belonging to them,Agir sur un abonné qui ne lui appartient pas,Kendisine ait olmayan bir aboneye işlem yapma,Actuar sobre un suscriptor que no le pertenece,ok,app/templates/radius/_perm_labels.html:159
+رؤية كل المشتركين (مشتركو كل المدراء),,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:160
+رؤية كل المدراء,,View all administrators,Voir tous les administrateurs,Tüm yöneticileri görüntüle,Ver todos los administradores,ok,app/templates/radius/_perm_labels.html:161
+رؤية كل حِزم البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:162
+رؤية تقارير الجميع,,View everyone's reports,Voir les rapports de tous,Herkesin raporlarını görüntüle,Ver los informes de todos,ok,app/templates/radius/_perm_labels.html:163
+كشف كلمات السر,,Reveal passwords,Révéler les mots de passe,Parolaları göster,Revelar contraseñas,ok,app/templates/radius/_perm_labels.html:164
+عرض الإعدادات,,View settings,Afficher les paramètres,Ayarları görüntüle,Ver ajustes,ok,app/templates/radius/_perm_labels.html:166
+تعديل الإعدادات,,Edit settings,Modifier les paramètres,Ayarları düzenle,Editar ajustes,ok,app/templates/radius/_perm_labels.html:167
+عرض سجل التدقيق,,View audit log,Afficher le journal d'audit,Denetim günlüğünü görüntüle,Ver registro de auditoría,ok,app/templates/radius/_perm_labels.html:168
+استخدام الواجهة البرمجية,,Use the API,Utiliser l'API,API'yi kullan,Usar la API,ok,app/templates/radius/_perm_labels.html:169
 كوتا,,,,,,"missing: en,fr,tr,es",app/templates/radius/_plans_fragments.html:20
 متكرر,,,,,,"missing: en,fr,tr,es",app/templates/radius/_plans_fragments.html:20
 مدمج,,,,,,"missing: en,fr,tr,es",app/templates/radius/_plans_fragments.html:20
@@ -10614,15 +10619,16 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 حساب المدير يمنح صاحبه الدخول إلى لوحة الراديوس. الدور هو ما يحدّد الصلاحيات الفعلية لكل مدير.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:30
 اسم المستخدم يُثبَّت عند الإنشاء ولا يمكن تعديله لاحقًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:33
 كلمة المرور تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:34
-الدور يحدّد الصلاحيات الفعلية — اختر دورًا مناسبًا أو اتركه بدون دور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:35
+المسمّى الوظيفي وحده يحدّد الصلاحيات — كل مدير يتبع مسمّى واحدًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:35
 أوقف الحالة لتعطيل دخول المدير مؤقتًا دون حذف حسابه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:36
 عند التعديل، اترك حقل كلمة المرور فارغًا للإبقاء على كلمة المرور الحالية.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:38
 الهوية والدور,,Identity and role,Identité et rôle,Kimlik ve rol,Identidad y rol,ok,app/templates/radius/admins_form.html:47
 لا يمكن تعديله.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:53
 لن يمكن تغييره بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:53
 الاسم الكامل,,Full Name,Nom complet,Tam Ad,Nombre completo,ok,app/templates/radius/admins_form.html:56
-— بدون —,,— None —,— Aucun —,— Yok —,— Ninguno —,ok,app/templates/radius/admins_form.html:62
-الدور يحدّد الصلاحيات الفعلية.,,The role determines the effective permissions.,Le rôle détermine les autorisations effectives.,"Rol, etkin izinleri belirler.",El rol determina los permisos efectivos.,ok,app/templates/radius/admins_form.html:69
+المسمّى الوظيفي,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:60
+— اختر —,,— Select —,— Sélectionner —,— Seçin —,— Seleccionar —,ok,app/templates/radius/admins_form.html:62
+المدير يورث صلاحيات مسمّاه الوظيفي فقط — لا صلاحيات منفردة للحساب.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:69
 التحقق من الدخول,,Login Verification,Vérification de la connexion,Giriş doğrulaması,Verificación de inicio de sesión,ok,app/templates/radius/admins_form.html:81
 اتركها فارغة لعدم التغيير,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:86
 كلمة مرور قوية,,Strong password,Mot de passe fort,Güçlü parola,Contraseña segura,ok,app/templates/radius/admins_form.html:86
@@ -10637,18 +10643,16 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 تصنيف داخلي للمدراء.,,Internal classification for managers.,Classement interne pour les gestionnaires.,Yöneticiler için dahili sınıflandırma.,Clasificación interna para los administradores.,ok,app/templates/radius/admins_form.html:122
 ملاحظات على الملف الشخصي,,Notes on the profile,Remarques sur le profil,Profil hakkında notlar,Notas sobre el perfil,ok,app/templates/radius/admins_form.html:125
 مستوى الوصول,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:135
-سوبر يوزر (كل الصلاحيات),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:139
-يُسند دور «مدير عام»: كل الصلاحيات والمنح ورؤية كل المشتركين وإدارة المدراء والأدوار — عدا ما يخصّ المالك وحده (الإعدادات، النسخ الاحتياطيّ، الإبطال، التوكنات، تصفير البيانات، منح الشراكة).,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:141
-منح صلاحيات المالك (شريك),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:145
-تحذير: الشريك يملك كل صلاحيات المالك — يدير المدراء والأدوار والإعدادات والمال والنسخ الاحتياطيّ ويمنح الشراكة لغيره. لا يستطيع خفض المالك الأصليّ أو حذفه. امنحها لشريكٍ تثق به فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:149
-المالك الأصليّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:154
-هذا الحساب هو المالك الأصليّ للشبكة — محميّ، لا يُعدَّل مستواه ولا يُحذف.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:155
-حدود الائتمان المالي (دين/سلف),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:167
-السوبر فقط — مدير جديد يبدأ بثقة صفر,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:168
-تفعيل سقف الدين (دين على المدير للمزوّد),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:175
-أقصى دين إجماليّ مسموح أن يدين به المدير (إنفاق فوق رصيده).,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:179
-تفعيل سقف السلف (سلف يمنحها المدير لمشتركيه),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:185
-أقصى إجماليّ سلف قائمة يمنحها المدير لمشتركيه في آنٍ واحد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:189
+منح صلاحيات المالك (شريك),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:140
+تحذير: الشريك يملك كل صلاحيات المالك — يدير المدراء والأدوار والإعدادات والمال والنسخ الاحتياطيّ ويمنح الشراكة لغيره. لا يستطيع خفض المالك الأصليّ أو حذفه. امنحها لشريكٍ تثق به فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:144
+المالك الأصليّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:149
+هذا الحساب هو المالك الأصليّ للشبكة — محميّ، لا يُعدَّل مستواه ولا يُحذف.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:150
+حدود الائتمان المالي (دين/سلف),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:162
+المالك أو من يحمل «سقوف دَين وسلفة المدراء» — مدير جديد يبدأ بثقة صفر,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:163
+تفعيل سقف الدين (دين على المدير للمزوّد),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:170
+أقصى دين إجماليّ مسموح أن يدين به المدير (إنفاق فوق رصيده).,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:174
+تفعيل سقف السلف (سلف يمنحها المدير لمشتركيه),,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:180
+أقصى إجماليّ سلف قائمة يمنحها المدير لمشتركيه في آنٍ واحد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:184
 %(v)s في النتائج,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:9
 إدارة حسابات المدراء والصلاحيات — إضافة، تعديل، أرشفة، ربط بدور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:49
 ملخّص الملفات,,Profiles summary,Résumé des profils,Profiller özeti,Resumen de perfiles,ok,app/templates/radius/admins_list.html:59
@@ -10669,17 +10673,18 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 معرّف الدخول للوحة — يُثبَّت عند الإنشاء ولا يمكن تغييره لاحقًا، فاختره بعناية.,,"The panel login ID; it's fixed at creation and can't be changed later, so choose it carefully.","L'identifiant de connexion au panneau ; il est figé à la création et ne peut être modifié par la suite, choisissez-le donc avec soin.","Panel giriş kimliği; oluşturma sırasında sabitlenir ve sonradan değiştirilemez, bu yüzden dikkatle seçin.","El ID de acceso al panel; se fija al crearlo y no se puede cambiar después, así que elígelo con cuidado.",ok,app/templates/radius/admins_list.html:177
 أحمد العلي,,Ahmad Al-Ali,Ahmad Al-Ali,Ahmad Al-Ali,Ahmad Al-Ali,ok,app/templates/radius/admins_list.html:181
 الاسم الودّي الذي يظهر في القوائم والسجلات — اختياري لكنه يسهّل التمييز.,,The friendly name that appears in lists and logs — optional but it makes identification easier.,Le nom convivial qui apparaît dans les listes et les journaux — facultatif mais il facilite l'identification.,Listelerde ve günlüklerde görünen kolay ad — isteğe bağlıdır ancak ayırt etmeyi kolaylaştırır.,El nombre descriptivo que aparece en las listas y los registros — opcional pero facilita la identificación.,ok,app/templates/radius/admins_list.html:182
-الدور يحدّد الصلاحيات الفعلية للمدير — «بدون» يعني حسابًا بلا أذونات محدّدة.,,"The role determines the manager's actual permissions; ""None"" means an account with no specific permissions.",Le rôle détermine les autorisations réelles du gestionnaire ; « Aucun » désigne un compte sans permissions spécifiques.,"Rol, yöneticinin gerçek izinlerini belirler; ""Yok"" belirli izinleri olmayan bir hesap anlamına gelir.",El rol determina los permisos reales del gestor; «Ninguno» significa una cuenta sin permisos específicos.,ok,app/templates/radius/admins_list.html:192
-دور «مدير عام»: كل الصلاحيات عدا ما يخصّ المالك وحده.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:204
-تحذير: الشريك يملك كل صلاحيات المالك. امنحها لشريكٍ تثق به فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:209
-تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ — استخدم كلمة قوية يصعب تخمينها.,,It is stored encrypted and not shown as plain text after saving — use a strong password that's hard to guess.,Il est stocké chiffré et n'apparaît pas en texte clair après l'enregistrement — utilisez un mot de passe fort et difficile à deviner.,Şifrelenmiş olarak saklanır ve kaydetmeden sonra düz metin olarak gösterilmez — tahmin edilmesi zor güçlü bir parola kullanın.,Se almacena cifrada y no se muestra como texto sin formato tras guardarla — usa una contraseña fuerte y difícil de adivinar.,ok,app/templates/radius/admins_list.html:221
-يُستخدم في المراسلات والتنبيهات — اختياري.,,Used in communications and notifications — optional.,Utilisé dans les communications et les notifications — facultatif.,İletişimlerde ve bildirimlerde kullanılır — isteğe bağlı.,Se usa en las comunicaciones y notificaciones — opcional.,ok,app/templates/radius/admins_list.html:231
-رقم الجوال الأساسي للتواصل — اختياري.,,Primary mobile number for contact — optional.,Numéro de mobile principal pour le contact — facultatif.,İletişim için birincil cep telefonu numarası — isteğe bağlı.,Número de móvil principal para contacto — opcional.,ok,app/templates/radius/admins_list.html:236
-هاتف بديل,,Alternate phone,Téléphone secondaire,Alternatif telefon,Teléfono alternativo,ok,app/templates/radius/admins_list.html:240
-رقم احتياطي إن وجد — اختياري.,,Backup number if available — optional.,Numéro de secours s'il existe — facultatif.,Varsa yedek numara — isteğe bağlı.,Número de reserva si existe — opcional.,ok,app/templates/radius/admins_list.html:241
-تصنيف داخلي للمدراء مفصول بفواصل — يسهّل البحث والتجميع.,,"An internal classification for administrators, comma-separated — it eases searching and grouping.","Une classification interne des administrateurs, séparée par des virgules — facilite la recherche et le regroupement.",Yöneticiler için virgülle ayrılmış dahili bir sınıflandırma — arama ve gruplamayı kolaylaştırır.,"Una clasificación interna de los administradores, separada por comas — facilita la búsqueda y la agrupación.",ok,app/templates/radius/admins_list.html:246
-مهام المدير، نطاق عمله، أي شروط خاصة...,,"The manager's tasks, scope of work, any special conditions...","Les tâches du gestionnaire, son périmètre, toute condition particulière...","Yöneticinin görevleri, çalışma kapsamı, varsa özel koşullar...","Las tareas del gerente, su ámbito de trabajo, cualquier condición especial...",ok,app/templates/radius/admins_list.html:251
-تظهر للإدارة فقط — لا تؤثر على الصلاحيات.,,Visible to administration only — does not affect permissions.,Visible uniquement par l'administration — n'affecte pas les autorisations.,Yalnızca yönetime görünür — izinleri etkilemez.,Visible solo para la administración — no afecta a los permisos.,ok,app/templates/radius/admins_list.html:252
+المدير يورث صلاحيات مسمّاه الوظيفي فقط — تُعدَّل الصلاحيات من صفحة المسمّيات الوظيفيّة لا من حساب المدير.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:192
+الرصيد الافتتاحيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:196
+يُشحن في محفظة المدير عند إنشائه (نقدًا). اتركه فارغًا لمدير بلا رصيد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:198
+تحذير: الشريك يملك كل صلاحيات المالك. امنحها لشريكٍ تثق به فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_list.html:211
+تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ — استخدم كلمة قوية يصعب تخمينها.,,It is stored encrypted and not shown as plain text after saving — use a strong password that's hard to guess.,Il est stocké chiffré et n'apparaît pas en texte clair après l'enregistrement — utilisez un mot de passe fort et difficile à deviner.,Şifrelenmiş olarak saklanır ve kaydetmeden sonra düz metin olarak gösterilmez — tahmin edilmesi zor güçlü bir parola kullanın.,Se almacena cifrada y no se muestra como texto sin formato tras guardarla — usa una contraseña fuerte y difícil de adivinar.,ok,app/templates/radius/admins_list.html:223
+يُستخدم في المراسلات والتنبيهات — اختياري.,,Used in communications and notifications — optional.,Utilisé dans les communications et les notifications — facultatif.,İletişimlerde ve bildirimlerde kullanılır — isteğe bağlı.,Se usa en las comunicaciones y notificaciones — opcional.,ok,app/templates/radius/admins_list.html:233
+رقم الجوال الأساسي للتواصل — اختياري.,,Primary mobile number for contact — optional.,Numéro de mobile principal pour le contact — facultatif.,İletişim için birincil cep telefonu numarası — isteğe bağlı.,Número de móvil principal para contacto — opcional.,ok,app/templates/radius/admins_list.html:238
+هاتف بديل,,Alternate phone,Téléphone secondaire,Alternatif telefon,Teléfono alternativo,ok,app/templates/radius/admins_list.html:242
+رقم احتياطي إن وجد — اختياري.,,Backup number if available — optional.,Numéro de secours s'il existe — facultatif.,Varsa yedek numara — isteğe bağlı.,Número de reserva si existe — opcional.,ok,app/templates/radius/admins_list.html:243
+تصنيف داخلي للمدراء مفصول بفواصل — يسهّل البحث والتجميع.,,"An internal classification for administrators, comma-separated — it eases searching and grouping.","Une classification interne des administrateurs, séparée par des virgules — facilite la recherche et le regroupement.",Yöneticiler için virgülle ayrılmış dahili bir sınıflandırma — arama ve gruplamayı kolaylaştırır.,"Una clasificación interna de los administradores, separada por comas — facilita la búsqueda y la agrupación.",ok,app/templates/radius/admins_list.html:248
+مهام المدير، نطاق عمله، أي شروط خاصة...,,"The manager's tasks, scope of work, any special conditions...","Les tâches du gestionnaire, son périmètre, toute condition particulière...","Yöneticinin görevleri, çalışma kapsamı, varsa özel koşullar...","Las tareas del gerente, su ámbito de trabajo, cualquier condición especial...",ok,app/templates/radius/admins_list.html:253
+تظهر للإدارة فقط — لا تؤثر على الصلاحيات.,,Visible to administration only — does not affect permissions.,Visible uniquement par l'administration — n'affecte pas les autorisations.,Yalnızca yönetime görünür — izinleri etkilemez.,Visible solo para la administración — no afecta a los permisos.,ok,app/templates/radius/admins_list.html:254
 ملخّص المدراء,,Managers summary,Résumé des gestionnaires,Yöneticiler özeti,Resumen de gerentes,ok,app/templates/radius/admins_profile_summary.html:6
 ملخّص ملفات المدراء,,Managers profiles summary,Résumé des profils des gestionnaires,Yönetici profilleri özeti,Resumen de perfiles de gerentes,ok,app/templates/radius/admins_profile_summary.html:8
 جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_profile_summary.html:54
@@ -10690,6 +10695,7 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 صلاحيات النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_profile_summary.html:70
 أضف أول مدير من زرّ «إضافة مدير» أعلى الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_profile_summary.html:78
 وسوم,,Tags,Étiquettes,Etiketler,Etiquetas,ok,app/templates/radius/admins_profile_summary.html:91
+— بدون —,,— None —,— Aucun —,— Yok —,— Ninguno —,ok,app/templates/radius/admins_profile_summary.html:116
 يحمي تجربة الدخول السلس من سرقة الجلسة,,Protects the seamless login experience from session hijacking,Protège l'expérience de connexion fluide contre le détournement de session,Kesintisiz giriş deneyimini oturum ele geçirmeye karşı korur,Protege la experiencia de inicio de sesión fluida contra el secuestro de sesión,ok,app/templates/radius/anti_mac_clone.html:13
 عند تشغيل الميزة: نربط عنوان MAC ببصمة الجهاز عند أول دخول ناجح، ثم نُعيد التحقّق على كل auth. نفس الـMAC ببصمة مختلفة = استنساخ → رفض + تنبيه + ركل الجلسة الحيّة. الميزة OFF افتراضيًّا — إن أردتها لباقات/مجموعات محدّدة استخدم النطاق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/anti_mac_clone.html:34
 ارتباطات نشطة,,,,,,"missing: en,fr,tr,es",app/templates/radius/anti_mac_clone.html:37
@@ -10960,8 +10966,8 @@ NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_c
 حفظ كقالب,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:161
 القوالب المحفوظة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:164
 الصلاحيات والحدود,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:182
-الأفعال والرؤية موروثة من الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:188
-عدّل الدور لتطبيقه على كل مدرائه دفعةً؛ وما تضبطه هنا تجاوزٌ فرديّ لهذا المدير فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:191
+صلاحيات هذا المدير كلها من مسمّاه الوظيفي,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:188
+لا صلاحيات منفردة للحساب: لتغييرها غيّر المسمّى من صفحة المدير، أو عدّل المسمّى نفسه فيُطبَّق على كل من يحمله. هنا المحفظة والحدود الرقميّة فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:191
 إزالة كل تجاوزات هذا المدير والعودة لوراثة دوره؟ (الحدود الرقميّة تبقى),,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:200
 تصفير التجاوزات,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:202
 الصلاحيات الدقيقة لهذا المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:219
@@ -11787,7 +11793,6 @@ MAC الحالي,,Current MAC,MAC actuelle,Mevcut MAC,MAC actual,ok,app/template
 حزمة للطباعة ونقاط البيع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_generate.html:367
 حزمة للبيع الإلكتروني,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_generate.html:368
 اسم وصفي يميّز الحزمة في القوائم والتقارير.,,A descriptive name that distinguishes the plan in lists and reports.,Un nom descriptif qui distingue le forfait dans les listes et les rapports.,Paketi listelerde ve raporlarda ayırt eden açıklayıcı bir ad.,Un nombre descriptivo que distingue el plan en listas e informes.,ok,app/templates/radius/cards_generate.html:373
-— اختر —,,— Select —,— Sélectionner —,— Seçin —,— Seleccionar —,ok,app/templates/radius/cards_generate.html:376
 تحدّد السرعة والكوتا التي ستُفعَّل عند الاستخدام.,,Defines the speed and quota that will be activated upon use.,Définit la vitesse et le quota qui seront activés à l'utilisation.,Kullanım sırasında etkinleştirilecek hızı ve kotayı belirler.,Define la velocidad y la cuota que se activarán al usarse.,ok,app/templates/radius/cards_generate.html:383
 حد أقصى,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_generate.html:386
 لكل دفعة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_generate.html:386

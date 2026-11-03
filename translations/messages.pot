@@ -1010,7 +1010,7 @@ msgstr ""
 msgid " — لم يصل التحديث الفوري للـ MikroTik (%(v)s)."
 msgstr ""
 
-#: app/radius/routes/admins.py:435
+#: app/radius/routes/admins.py:465
 msgid " — لم يُحفَظ شيء."
 msgstr ""
 
@@ -12345,7 +12345,7 @@ msgstr ""
 msgid "أقصى أيام مجانية"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:189
+#: app/templates/radius/admins_form.html:184
 msgid "أقصى إجماليّ سلف قائمة يمنحها المدير لمشتركيه في آنٍ واحد."
 msgstr ""
 
@@ -12400,7 +12400,7 @@ msgstr ""
 msgid "أقصى دفعة نقدية للمشترك في العملية الواحدة"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:179
+#: app/templates/radius/admins_form.html:174
 msgid "أقصى دين إجماليّ مسموح أن يدين به المدير (إنفاق فوق رصيده)."
 msgstr ""
 
@@ -14111,6 +14111,10 @@ msgstr ""
 msgid ""
 "أُنشئ peer نفق %s لهذا الراوتر، لكن لم يُختبر الوصول بعد — اضغط «اختبار "
 "الاتصال» في قائمة الأجهزة."
+msgstr ""
+
+#: app/radius/routes/admins.py:188
+msgid "أُنشئ المدير لكن تعذّر شحن رصيده: "
 msgstr ""
 
 #: app/templates/radius/wg_details.html:156
@@ -16407,7 +16411,7 @@ msgid "إضافة جهاز"
 msgstr ""
 
 #: app/radius/services/event_labels.py:217
-#: app/templates/radius/_perm_labels.html:122
+#: app/templates/radius/_perm_labels.html:123
 #: app/templates/radius/devices_form.html:6
 #: app/templates/radius/network_devices_form.html:18
 #: app/templates/radius/network_devices_form.html:41
@@ -16435,7 +16439,7 @@ msgstr ""
 msgid "إضافة حزمة سريعة — الأساسيات فقط"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:150
+#: app/templates/radius/_perm_labels.html:152
 msgid "إضافة حساب مستخدم متجر"
 msgstr ""
 
@@ -16786,7 +16790,7 @@ msgstr ""
 msgid "إضافة وقت مدفوعة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:149
+#: app/templates/radius/_perm_labels.html:151
 msgid "إضافة/إدارة باقة إلكترونية"
 msgstr ""
 
@@ -16992,7 +16996,7 @@ msgstr ""
 msgid "إعادة الربط"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:119
+#: app/templates/radius/_perm_labels.html:120
 msgid "إعادة السعر الرسمي"
 msgstr ""
 
@@ -17087,7 +17091,7 @@ msgstr ""
 msgid "إعادة تشغيل جهاز الشبكة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:128
+#: app/templates/radius/_perm_labels.html:129
 msgid "إعادة تشغيل راوتر"
 msgstr ""
 
@@ -17204,7 +17208,7 @@ msgstr ""
 msgid "إعادة ضبط الـ NTP"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:132
+#: app/templates/radius/_perm_labels.html:133
 msgid "إعادة ضبط المصنع"
 msgstr ""
 
@@ -17777,7 +17781,7 @@ msgstr ""
 #: app/templates/radius/admin_pricing.html:254
 #: app/templates/radius/admin_pricing.html:279
 #: app/templates/radius/admins_list.html:166
-#: app/templates/radius/admins_list.html:258
+#: app/templates/radius/admins_list.html:260
 #: app/templates/radius/bandwidth_schedules.html:99
 #: app/templates/radius/bandwidth_schedules.html:195
 #: app/templates/radius/bandwidth_schedules.html:293
@@ -17982,7 +17986,7 @@ msgstr ""
 #: app/templates/radius/accounting_ledger.html:52
 #: app/templates/radius/admin_pricing.html:265
 #: app/templates/radius/admin_pricing.html:290
-#: app/templates/radius/admins_form.html:196
+#: app/templates/radius/admins_form.html:191
 #: app/templates/radius/backups.html:543 app/templates/radius/backups.html:602
 #: app/templates/radius/bandwidth_form.html:225
 #: app/templates/radius/card_marketplace.html:851
@@ -18645,8 +18649,8 @@ msgid "إنشاء المحفظة"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:22
-#: app/templates/radius/admins_form.html:197
-#: app/templates/radius/admins_list.html:259
+#: app/templates/radius/admins_form.html:192
+#: app/templates/radius/admins_list.html:261
 msgid "إنشاء المدير"
 msgstr ""
 
@@ -18660,7 +18664,7 @@ msgstr ""
 
 #: app/radius/services/event_labels.py:244
 #: app/radius/services/manager_grants.py:370
-#: app/templates/radius/_perm_labels.html:113
+#: app/templates/radius/_perm_labels.html:114
 msgid "إنشاء باقة"
 msgstr ""
 
@@ -18847,7 +18851,7 @@ msgstr ""
 msgid "إنشاء مدراء فرعيّين + تفويض"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:139
+#: app/templates/radius/_perm_labels.html:140
 msgid "إنشاء مدير"
 msgstr ""
 
@@ -19966,7 +19970,7 @@ msgstr ""
 msgid "اختبار السرعة"
 msgstr ""
 
-#: app/api/permission_guard.py:731 app/templates/radius/tool_test_auth.html:11
+#: app/api/permission_guard.py:732 app/templates/radius/tool_test_auth.html:11
 msgid "اختبار المصادقة"
 msgstr ""
 
@@ -20261,6 +20265,10 @@ msgstr ""
 msgid "اختر المدير الذي يتابع هذا الحساب."
 msgstr ""
 
+#: app/radius/routes/admins.py:206
+msgid "اختر المسمّى الوظيفي للمدير — منه وحده تأتي صلاحياته."
+msgstr ""
+
 #: app/api/v1/service_requests.py:385 app/api/v1/share_groups.py:90
 msgid "اختر المشترك أولًا."
 msgstr ""
@@ -20483,7 +20491,7 @@ msgid ""
 "الأصول."
 msgstr ""
 
-#: app/radius/routes/cards.py:3727
+#: app/radius/routes/cards.py:3733
 msgid "اختر خطّة للحزمة."
 msgstr ""
 
@@ -21582,7 +21590,7 @@ msgstr ""
 msgid "استخدام المعالج"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:167
+#: app/templates/radius/_perm_labels.html:169
 msgid "استخدام الواجهة البرمجية"
 msgstr ""
 
@@ -21798,7 +21806,7 @@ msgstr ""
 msgid "استرجاع سلفة"
 msgstr ""
 
-#: app/radius/routes/cards.py:3768
+#: app/radius/routes/cards.py:3774
 msgid "استرجاع: فشل توليد الحزمة من العرض"
 msgstr ""
 
@@ -21888,7 +21896,7 @@ msgstr ""
 msgid "استعادة المؤرشف"
 msgstr ""
 
-#: app/radius/services/recycle_restore_policy.py:25
+#: app/radius/services/recycle_restore_policy.py:28
 msgid "استعادة المدراء والأدوار مقصورة على المالك أو الشريك."
 msgstr ""
 
@@ -22619,7 +22627,7 @@ msgstr ""
 msgid "اسم الدور «%(name)s» مستخدم مسبقًا."
 msgstr ""
 
-#: app/api/v1/admins.py:464 app/radius/routes/admins.py:443
+#: app/api/v1/admins.py:464 app/radius/routes/admins.py:473
 msgid "اسم الدور مطلوب."
 msgstr ""
 
@@ -23023,7 +23031,7 @@ msgstr ""
 msgid "اسم المستخدم مطلوب"
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:387
+#: app/radius/routes/manager_distributor_ops.py:400
 msgid "اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل."
 msgstr ""
 
@@ -25752,10 +25760,6 @@ msgstr ""
 msgid "الأفعال المسموح بها"
 msgstr ""
 
-#: app/templates/radius/business_operator_profile.html:188
-msgid "الأفعال والرؤية موروثة من الدور"
-msgstr ""
-
 #: app/templates/radius/sections_admin.html:39
 msgid "الأقسام"
 msgstr ""
@@ -27478,7 +27482,7 @@ msgstr ""
 msgid "الباقة (البروفايل):"
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:129
+#: app/radius/routes/manager_distributor_ops.py:137
 msgid "الباقة (الحزمة)"
 msgstr ""
 
@@ -27792,7 +27796,7 @@ msgid "البريد"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:108
-#: app/templates/radius/admins_list.html:229
+#: app/templates/radius/admins_list.html:231
 #: app/templates/radius/communications_send.html:78
 #: app/templates/radius/communications_templates.html:149
 #: app/templates/radius/distributors_form.html:93
@@ -28463,7 +28467,7 @@ msgid "التحقق من إنشاء الملف"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:81
-#: app/templates/radius/admins_list.html:215
+#: app/templates/radius/admins_list.html:217
 msgid "التحقق من الدخول"
 msgstr ""
 
@@ -28963,7 +28967,7 @@ msgstr ""
 msgid "التصدير — CSV / Excel / PDF"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:157
+#: app/templates/radius/_perm_labels.html:159
 msgid "التصرف بمشترك غير تابع له"
 msgstr ""
 
@@ -29307,7 +29311,7 @@ msgstr ""
 msgid "التقارير المالية والكروت والموزّعين"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:146
+#: app/templates/radius/_perm_labels.html:148
 msgid "التقارير المالية ودفتر القيود"
 msgstr ""
 
@@ -30162,7 +30166,7 @@ msgstr ""
 #: app/radius/routes/users.py:1311 app/radius/services/audit_format.py:472
 #: app/radius/services/users.py:1803 app/templates/radius/admins_form.html:112
 #: app/templates/radius/admins_list.html:91
-#: app/templates/radius/admins_list.html:234
+#: app/templates/radius/admins_list.html:236
 #: app/templates/radius/admins_profile_summary.html:90
 #: app/templates/radius/card_user_360.html:195
 #: app/templates/radius/card_users.html:91
@@ -30247,7 +30251,7 @@ msgstr ""
 #: app/templates/radius/accounting_reports.html:113
 #: app/templates/radius/admins_form.html:72
 #: app/templates/radius/admins_list.html:93
-#: app/templates/radius/admins_list.html:195
+#: app/templates/radius/admins_list.html:202
 #: app/templates/radius/admins_profile_summary.html:92
 #: app/templates/radius/anti_mac_clone.html:190
 #: app/templates/radius/bandwidth_schedules.html:216
@@ -31788,9 +31792,7 @@ msgstr ""
 
 #: app/radius/services/event_labels.py:318
 #: app/radius/services/migration/engine.py:1233
-#: app/templates/radius/admins_form.html:60
 #: app/templates/radius/admins_list.html:89
-#: app/templates/radius/admins_list.html:185
 #: app/templates/radius/admins_profile_summary.html:88
 #: app/templates/radius/business_operator_profile.html:235
 #: app/templates/radius/docs_admins.html:46
@@ -31798,13 +31800,9 @@ msgstr ""
 msgid "الدور"
 msgstr ""
 
-#: app/radius/routes/admins.py:177
-msgid "الدور المحدد غير موجود — اختر دورًا للمدير."
-msgstr ""
-
 #: app/api/v1/admins.py:282 app/api/v1/admins.py:361
-#: app/radius/auth/owner.py:187
-#: app/radius/routes/manager_distributor_ops.py:412
+#: app/radius/auth/owner.py:189
+#: app/radius/routes/manager_distributor_ops.py:425
 msgid "الدور المحدد غير موجود."
 msgstr ""
 
@@ -31827,20 +31825,6 @@ msgstr ""
 
 #: app/templates/admin/_admin_layout.html:778
 msgid "الدور يحدد الصلاحيات التي يحصل عليها هذا المدير."
-msgstr ""
-
-#: app/templates/radius/admins_list.html:192
-msgid ""
-"الدور يحدّد الصلاحيات الفعلية للمدير — «بدون» يعني حسابًا بلا أذونات "
-"محدّدة."
-msgstr ""
-
-#: app/templates/radius/admins_form.html:35
-msgid "الدور يحدّد الصلاحيات الفعلية — اختر دورًا مناسبًا أو اتركه بدون دور."
-msgstr ""
-
-#: app/templates/radius/admins_form.html:69
-msgid "الدور يحدّد الصلاحيات الفعلية."
 msgstr ""
 
 #: app/templates/radius/admins_list.html:75
@@ -32858,6 +32842,14 @@ msgstr ""
 
 #: app/templates/radius/distributors_list.html:259
 msgid "الرصيد الافتتاحي"
+msgstr ""
+
+#: app/templates/radius/admins_list.html:196
+msgid "الرصيد الافتتاحيّ"
+msgstr ""
+
+#: app/radius/routes/admins.py:171
+msgid "الرصيد الافتتاحيّ ليس رقمًا — أُنشئ المدير بلا رصيد."
 msgstr ""
 
 #: app/templates/radius/credit_dashboard.html:117
@@ -34231,10 +34223,6 @@ msgstr ""
 msgid "السنغال"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:168
-msgid "السوبر فقط — مدير جديد يبدأ بثقة صفر"
-msgstr ""
-
 #: app/templates/radius/settings_page.html:252
 msgid "السودان"
 msgstr ""
@@ -34555,7 +34543,7 @@ msgstr ""
 msgid "الشدة تحدد أولوية التدخل، وليست مجرد لون."
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:153
+#: app/templates/radius/_perm_labels.html:155
 msgid "الشراء بالنيابة عن المستخدم"
 msgstr ""
 
@@ -35127,7 +35115,7 @@ msgstr ""
 msgid "الصيانة"
 msgstr ""
 
-#: app/api/permission_guard.py:735
+#: app/api/permission_guard.py:736
 msgid "الصيانة الجماعيّة"
 msgstr ""
 
@@ -35415,7 +35403,7 @@ msgstr ""
 #: app/api/v1/card_users.py:251 app/radius/core/numbers.py:63
 #: app/radius/routes/card_users_marketplace.py:465
 #: app/radius/routes/card_users_marketplace.py:500
-#: app/radius/routes/manager_distributor_ops.py:129
+#: app/radius/routes/manager_distributor_ops.py:137
 #: app/radius/routes/users.py:1311 app/radius/services/audit_format.py:465
 #: app/radius/services/audit_format.py:466
 #: app/radius/services/audit_format.py:469
@@ -37976,7 +37964,11 @@ msgstr ""
 msgid "المالك"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:154
+#: app/templates/radius/admins_form.html:163
+msgid "المالك أو من يحمل «سقوف دَين وسلفة المدراء» — مدير جديد يبدأ بثقة صفر"
+msgstr ""
+
+#: app/templates/radius/admins_form.html:149
 msgid "المالك الأصليّ"
 msgstr ""
 
@@ -39169,7 +39161,7 @@ msgid "المدير المسؤول:"
 msgstr ""
 
 #: app/templates/radius/admins_list.html:77
-#: app/templates/radius/admins_list.html:197
+#: app/templates/radius/admins_list.html:204
 msgid "المدير المعطَّل يبقى محفوظًا لكنه لا يستطيع تسجيل الدخول."
 msgstr ""
 
@@ -39186,6 +39178,16 @@ msgstr ""
 
 #: app/radius/services/manager_credit.py:48
 msgid "المدير لا يوجد لديه رصيد كافٍ — هل تريد إضافتها كدين؟"
+msgstr ""
+
+#: app/templates/radius/admins_list.html:192
+msgid ""
+"المدير يورث صلاحيات مسمّاه الوظيفي فقط — تُعدَّل الصلاحيات من صفحة "
+"المسمّيات الوظيفيّة لا من حساب المدير."
+msgstr ""
+
+#: app/templates/radius/admins_form.html:69
+msgid "المدير يورث صلاحيات مسمّاه الوظيفي فقط — لا صلاحيات منفردة للحساب."
 msgstr ""
 
 #: app/templates/radius/docs_admins.html:60
@@ -39750,6 +39752,15 @@ msgstr ""
 msgid "المسموح في باقتك"
 msgstr ""
 
+#: app/templates/radius/admins_form.html:60
+#: app/templates/radius/admins_list.html:185
+msgid "المسمّى الوظيفي"
+msgstr ""
+
+#: app/templates/radius/admins_form.html:35
+msgid "المسمّى الوظيفي وحده يحدّد الصلاحيات — كل مدير يتبع مسمّى واحدًا."
+msgstr ""
+
 #: app/templates/radius/cards_offers.html:295
 #: app/templates/radius/cards_offers.html:457
 #: app/templates/radius/docs_card_offers.html:112
@@ -39764,7 +39775,7 @@ msgstr ""
 msgid "المشاركة والتسويات:"
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:129
+#: app/radius/routes/manager_distributor_ops.py:137
 #: app/radius/services/business_os_finance.py:123
 #: app/radius/services/event_labels.py:308
 #: app/templates/radius/_speed_rules_panel.html:37
@@ -45381,7 +45392,7 @@ msgstr ""
 msgid "بطاقات الحزمة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:109
+#: app/templates/radius/_perm_labels.html:110
 #: app/templates/radius/docs_roles_permissions.html:393
 msgid "بطاقات الشحن"
 msgstr ""
@@ -46295,7 +46306,7 @@ msgstr ""
 msgid "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب"
 msgstr ""
 
-#: app/api/access_control.py:179 app/api/permission_guard.py:805
+#: app/api/access_control.py:179 app/api/permission_guard.py:806
 #: app/api/v1/loans.py:52 app/api/v1/subscriber_actions.py:182
 #: app/radius/routes/blueprint.py:1344
 msgid "بلغت الحدّ اليوميّ المسموح لهذا الإجراء."
@@ -48996,7 +49007,7 @@ msgid "تحديث DHCP"
 msgstr ""
 
 #: app/radius/services/tr069/device_service.py:134
-#: app/templates/radius/_perm_labels.html:131
+#: app/templates/radius/_perm_labels.html:132
 msgid "تحديث Firmware"
 msgstr ""
 
@@ -49322,14 +49333,14 @@ msgstr ""
 msgid "تحذير من الراوتر"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:149
+#: app/templates/radius/admins_form.html:144
 msgid ""
 "تحذير: الشريك يملك كل صلاحيات المالك — يدير المدراء والأدوار والإعدادات "
 "والمال والنسخ الاحتياطيّ ويمنح الشراكة لغيره. لا يستطيع خفض المالك "
 "الأصليّ أو حذفه. امنحها لشريكٍ تثق به فقط."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:209
+#: app/templates/radius/admins_list.html:211
 msgid "تحذير: الشريك يملك كل صلاحيات المالك. امنحها لشريكٍ تثق به فقط."
 msgstr ""
 
@@ -50696,7 +50707,7 @@ msgstr ""
 msgid "تسجيل."
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:127
+#: app/templates/radius/_perm_labels.html:128
 msgid "تسجيل/ربط الراوترات"
 msgstr ""
 
@@ -51331,7 +51342,7 @@ msgid ""
 "وحذف."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:246
+#: app/templates/radius/admins_list.html:248
 msgid "تصنيف داخلي للمدراء مفصول بفواصل — يسهّل البحث والتجميع."
 msgstr ""
 
@@ -51780,7 +51791,7 @@ msgstr ""
 msgid "تظهر في جدول اللقطات لتعرف لماذا حُفظت هذه اللقطة."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:252
+#: app/templates/radius/admins_list.html:254
 msgid "تظهر للإدارة فقط — لا تؤثر على الصلاحيات."
 msgstr ""
 
@@ -51945,7 +51956,7 @@ msgstr ""
 msgid "تعديل الأدوار"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:165
+#: app/templates/radius/_perm_labels.html:167
 msgid "تعديل الإعدادات"
 msgstr ""
 
@@ -52060,7 +52071,7 @@ msgid "تعديل باقات المشتركين"
 msgstr ""
 
 #: app/radius/services/manager_grants.py:372
-#: app/templates/radius/_perm_labels.html:114
+#: app/templates/radius/_perm_labels.html:115
 msgid "تعديل باقة"
 msgstr ""
 
@@ -52118,7 +52129,7 @@ msgstr ""
 msgid "تعديل جهاز"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:123
+#: app/templates/radius/_perm_labels.html:124
 msgid "تعديل جهاز شبكة"
 msgstr ""
 
@@ -52175,7 +52186,7 @@ msgstr ""
 msgid "تعديل سريع للكرت"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:118
+#: app/templates/radius/_perm_labels.html:119
 msgid "تعديل سعر مدير خاص"
 msgstr ""
 
@@ -52251,11 +52262,11 @@ msgid "تعديل محدود (بدون إعدادات النظام أو المس
 msgstr ""
 
 #: app/radius/services/manager_activity_audit.py:194
-#: app/templates/radius/_perm_labels.html:140
+#: app/templates/radius/_perm_labels.html:141
 msgid "تعديل مدير"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:151
+#: app/templates/radius/_perm_labels.html:153
 msgid "تعديل مستخدم المتجر"
 msgstr ""
 
@@ -52317,7 +52328,7 @@ msgstr ""
 msgid "تعديل: تصويب يدوي للرصيد بقيد موثّق."
 msgstr ""
 
-#: app/api/permission_guard.py:729
+#: app/api/permission_guard.py:730
 msgid "تعديلات عامّة جماعيّة"
 msgstr ""
 
@@ -53715,7 +53726,7 @@ msgstr ""
 msgid "تعذّر تنفيذ السكربت على الراوتر."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:578
+#: app/radius/routes/manager_distributor_ops.py:591
 #, python-format
 msgid "تعذّر تنفيذ الطلب بعد الاعتماد: %(exc)s"
 msgstr ""
@@ -54767,7 +54778,7 @@ msgstr ""
 
 #: app/radius/services/tr069/action_service.py:103
 #: app/radius/services/tr069/device_service.py:133
-#: app/templates/radius/_perm_labels.html:130
+#: app/templates/radius/_perm_labels.html:131
 msgid "تغيير PPPoE"
 msgstr ""
 
@@ -54777,7 +54788,7 @@ msgid "تغيير Public IP / Site Exit"
 msgstr ""
 
 #: app/radius/services/tr069/device_service.py:133
-#: app/templates/radius/_perm_labels.html:129
+#: app/templates/radius/_perm_labels.html:130
 msgid "تغيير Wi-Fi"
 msgstr ""
 
@@ -55676,11 +55687,11 @@ msgstr ""
 msgid "تفعيل دورة جديدة بعد التغيير"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:175
+#: app/templates/radius/admins_form.html:170
 msgid "تفعيل سقف الدين (دين على المدير للمزوّد)"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:185
+#: app/templates/radius/admins_form.html:180
 msgid "تفعيل سقف السلف (سلف يمنحها المدير لمشتركيه)"
 msgstr ""
 
@@ -56524,7 +56535,7 @@ msgstr ""
 msgid "تم إنشاء الحساب «%(username)s» بنجاح."
 msgstr ""
 
-#: app/radius/routes/admins.py:458
+#: app/radius/routes/admins.py:488
 #, python-format
 msgid "تم إنشاء الدور «%(name)s» ✓"
 msgstr ""
@@ -56555,12 +56566,12 @@ msgstr ""
 msgid "تم إنشاء المحفظة المالية."
 msgstr ""
 
-#: app/radius/routes/admins.py:222
+#: app/radius/routes/admins.py:252
 #, python-format
 msgid "تم إنشاء المدير «%(username)s»."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:436
+#: app/radius/routes/manager_distributor_ops.py:449
 #, python-format
 msgid "تم إنشاء المدير الفرعيّ «%(username)s»."
 msgstr ""
@@ -56633,12 +56644,12 @@ msgid ""
 "كلمة المرور: %(p)s"
 msgstr ""
 
-#: app/radius/routes/cards.py:2154 app/radius/routes/cards.py:3788
+#: app/radius/routes/cards.py:2154 app/radius/routes/cards.py:3794
 #, python-format
 msgid "تم إنشاء دفعة «%(batch_code)s» — %(v)s."
 msgstr ""
 
-#: app/radius/routes/cards.py:3784
+#: app/radius/routes/cards.py:3790
 #, python-format
 msgid ""
 "تم إنشاء دفعة «%(batch_code)s» — %(v)s. خُصم %(v2)s جملةً (هامش متوقّع "
@@ -56824,7 +56835,7 @@ msgstr ""
 msgid "تم اعتماد الطلب تلقائيًا حسب سياسة الباقة."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:574
+#: app/radius/routes/manager_distributor_ops.py:587
 msgid "تم اعتماد الطلب وتنفيذه."
 msgstr ""
 
@@ -56912,7 +56923,7 @@ msgstr ""
 msgid "تم التحديث بنجاح"
 msgstr ""
 
-#: app/radius/routes/admins.py:316 app/radius/routes/devices.py:194
+#: app/radius/routes/admins.py:346 app/radius/routes/devices.py:194
 #: app/radius/routes/saas_modules.py:621 app/radius/routes/share_groups.py:93
 #: app/radius/routes/tenants.py:78 app/radius/routes/users.py:2463
 msgid "تم التحديث."
@@ -57346,7 +57357,7 @@ msgstr ""
 msgid "تم تحديث الحالة."
 msgstr ""
 
-#: app/radius/routes/admins.py:361
+#: app/radius/routes/admins.py:391
 msgid "تم تحديث الصلاحيات."
 msgstr ""
 
@@ -57376,7 +57387,7 @@ msgstr ""
 msgid "تم تحديث حالة الترخيص"
 msgstr ""
 
-#: app/radius/routes/cards.py:3631
+#: app/radius/routes/cards.py:3637
 msgid "تم تحديث حالة العرض."
 msgstr ""
 
@@ -57384,7 +57395,7 @@ msgstr ""
 msgid "تم تحديث حالة القسم."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:304
+#: app/radius/routes/manager_distributor_ops.py:317
 msgid "تم تحديث صلاحيات وحدود المشغل."
 msgstr ""
 
@@ -57392,7 +57403,7 @@ msgstr ""
 msgid "تم تحديث عقد السعة"
 msgstr ""
 
-#: app/radius/routes/cards.py:3618
+#: app/radius/routes/cards.py:3621
 msgid "تم تحديث قائمة المشاركة."
 msgstr ""
 
@@ -57673,7 +57684,7 @@ msgid ""
 "بدون فصل المستخدم (حتى %(ends_local)s)."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:360
+#: app/radius/routes/manager_distributor_ops.py:373
 msgid "تم تطبيق القالب على المدير. يمكنك التعديل الآن."
 msgstr ""
 
@@ -57946,7 +57957,7 @@ msgid ""
 " أو اعتماد أدمن سيُرفض الآن — تأكّد أن تطبيقاتك تُرسل الاعتماد."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:523
+#: app/radius/routes/manager_distributor_ops.py:536
 msgid "تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك)."
 msgstr ""
 
@@ -58148,7 +58159,7 @@ msgstr ""
 msgid "تم حذف الـ peer."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:350
+#: app/radius/routes/manager_distributor_ops.py:363
 #: app/radius/routes/print_templates.py:1364
 msgid "تم حذف القالب."
 msgstr ""
@@ -58197,7 +58208,7 @@ msgstr ""
 msgid "تم حفظ %(v)s."
 msgstr ""
 
-#: app/radius/routes/admins.py:587
+#: app/radius/routes/admins.py:617
 #, python-format
 msgid "تم حفظ أساس صلاحيات الدور «%(name)s» — يَرثه كلّ مدير بهذا الدور ✓"
 msgstr ""
@@ -58234,7 +58245,7 @@ msgstr ""
 msgid "تم حفظ التصميم بنجاح — يمكنك الآن نشره على الراوتر من شريط النشر بالأسفل."
 msgstr ""
 
-#: app/radius/routes/admins.py:532
+#: app/radius/routes/admins.py:562
 msgid "تم حفظ التعديلات ✓"
 msgstr ""
 
@@ -58320,7 +58331,7 @@ msgstr ""
 msgid "تم حفظ قالب الرسالة."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:341
+#: app/radius/routes/manager_distributor_ops.py:354
 msgid "تم حفظ قالب الصلاحيات."
 msgstr ""
 
@@ -58405,7 +58416,7 @@ msgstr ""
 msgid "تم رفض السكربت تلقائياً بسبب بيانات حسّاسة — لا يمكن المتابعة."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:586
+#: app/radius/routes/manager_distributor_ops.py:599
 msgid "تم رفض الطلب."
 msgstr ""
 
@@ -58486,7 +58497,7 @@ msgstr ""
 msgid "تم شحن المحفظة وتسجيل القيد المالي."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:601
+#: app/radius/routes/manager_distributor_ops.py:614
 msgid "تم شحن محفظة المشغل."
 msgstr ""
 
@@ -58677,12 +58688,12 @@ msgstr ""
 msgid "تمت أرشفة الباقة. يمكنك استعادتها من سلة المحذوفات."
 msgstr ""
 
-#: app/radius/routes/admins.py:557
+#: app/radius/routes/admins.py:587
 #, python-format
 msgid "تمت أرشفة الدور «%(name)s» ✓"
 msgstr ""
 
-#: app/radius/routes/admins.py:334
+#: app/radius/routes/admins.py:364
 msgid "تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات."
 msgstr ""
 
@@ -58788,7 +58799,7 @@ msgstr ""
 msgid "تمت إعادة تفعيل خدمتك. أهلًا بعودتك {name}."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:321
+#: app/radius/routes/manager_distributor_ops.py:334
 msgid ""
 "تمت إعادة هذا المدير لوراثة أساس دوره — أُزيلت تجاوزاته الفرديّة (الحدود "
 "الرقميّة باقية)."
@@ -59852,12 +59863,12 @@ msgstr ""
 msgid "تنقصك الصلاحية"
 msgstr ""
 
-#: app/radius/services/recycle_restore_policy.py:56
+#: app/radius/services/recycle_restore_policy.py:59
 #, python-format
 msgid "تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع."
 msgstr ""
 
-#: app/api/permission_guard.py:822
+#: app/api/permission_guard.py:823
 #, python-format
 msgid "تنقصك الصلاحية: %(v)s."
 msgstr ""
@@ -60209,7 +60220,7 @@ msgstr ""
 msgid "توليد حزمة من العرض"
 msgstr ""
 
-#: app/radius/routes/cards.py:3752 app/radius/services/card_offers.py:403
+#: app/radius/routes/cards.py:3758 app/radius/services/card_offers.py:403
 #, python-format
 msgid "توليد حزمة من العرض «%(v)s» (%(count)s بطاقة)"
 msgstr ""
@@ -60449,7 +60460,7 @@ msgid ""
 "مصمّمه (أو ضمن حزمة ZIP للرفع اليدوي)."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:221
+#: app/templates/radius/admins_list.html:223
 msgid "تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ — استخدم كلمة قوية يصعب تخمينها."
 msgstr ""
 
@@ -63872,7 +63883,7 @@ msgstr ""
 msgid "حدود CoA وما تتوقّعه"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:167
+#: app/templates/radius/admins_form.html:162
 msgid "حدود الائتمان المالي (دين/سلف)"
 msgstr ""
 
@@ -64443,7 +64454,7 @@ msgstr ""
 
 #: app/radius/services/event_labels.py:246
 #: app/radius/services/manager_grants.py:374
-#: app/templates/radius/_perm_labels.html:115
+#: app/templates/radius/_perm_labels.html:116
 #: app/templates/radius/docs_sync_queue.html:238
 #: app/templates/radius/sync_list.html:46
 msgid "حذف باقة"
@@ -64465,7 +64476,7 @@ msgid "حذف جدولة النطاق الترددي"
 msgstr ""
 
 #: app/radius/services/event_labels.py:219
-#: app/templates/radius/_perm_labels.html:124
+#: app/templates/radius/_perm_labels.html:125
 msgid "حذف جهاز شبكة"
 msgstr ""
 
@@ -64538,7 +64549,7 @@ msgstr ""
 msgid "حذف محاولات إشعارات الربط الفاشلة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:141
+#: app/templates/radius/_perm_labels.html:142
 msgid "حذف مدير"
 msgstr ""
 
@@ -64626,6 +64637,10 @@ msgid ""
 "متأكّد؟"
 msgstr ""
 
+#: app/templates/radius/_perm_labels.html:109
+msgid "حذف نهائيّ للحِزم والبطاقات (بلا رجعة)"
+msgstr ""
+
 #: app/templates/radius/access_control.html:591
 msgid "حذف هذا الجهاز من القائمة؟"
 msgstr ""
@@ -64665,7 +64680,7 @@ msgstr ""
 msgid "حذف/أرشفة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:154
+#: app/templates/radius/_perm_labels.html:156
 msgid "حذف/استعادة مستخدم المتجر"
 msgstr ""
 
@@ -64922,7 +64937,7 @@ msgstr ""
 msgid "حزم بطاقات"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:110
+#: app/templates/radius/_perm_labels.html:111
 msgid "حزم طباعة البطاقات"
 msgstr ""
 
@@ -65692,7 +65707,7 @@ msgid "حفظ التعديل"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:22
-#: app/templates/radius/admins_form.html:197
+#: app/templates/radius/admins_form.html:192
 #: app/templates/radius/bandwidth_form.html:227
 #: app/templates/radius/card_marketplace.html:1120
 #: app/templates/radius/cards_batch_edit.html:314
@@ -68132,7 +68147,7 @@ msgstr ""
 msgid "دعم المتجر ← طلبات الشحن"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:155
+#: app/templates/radius/_perm_labels.html:157
 msgid "دعم طلبات الشحن (تأكيد الإيداع/السحب)"
 msgstr ""
 
@@ -68161,7 +68176,7 @@ msgid "دعم وطلبات المتجر"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:121
-#: app/templates/radius/admins_list.html:245
+#: app/templates/radius/admins_list.html:247
 msgid "دعم، تحصيل"
 msgstr ""
 
@@ -69097,10 +69112,6 @@ msgid ""
 "الدور؛ اضبط «ممنوع» لمديرٍ بعينه من صفحته."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:204
-msgid "دور «مدير عام»: كل الصلاحيات عدا ما يخصّ المالك وحده."
-msgstr ""
-
 #: app/templates/radius/roles_list.html:27
 msgid "دور ·"
 msgstr ""
@@ -69338,7 +69349,7 @@ msgid ""
 "محجوب — ما تُفعّله هنا يَرثه كلّ مدير بهذا الدور."
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:161
+#: app/templates/radius/_perm_labels.html:163
 msgid "رؤية تقارير الجميع"
 msgstr ""
 
@@ -69348,15 +69359,15 @@ msgstr ""
 msgid "رؤية سعر التكلفة/الجملة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:159
+#: app/templates/radius/_perm_labels.html:161
 msgid "رؤية كل المدراء"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:158
+#: app/templates/radius/_perm_labels.html:160
 msgid "رؤية كل المشتركين (مشتركو كل المدراء)"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:160
+#: app/templates/radius/_perm_labels.html:162
 msgid "رؤية كل حِزم البطاقات"
 msgstr ""
 
@@ -70277,7 +70288,7 @@ msgstr ""
 msgid "رجوع"
 msgstr ""
 
-#: app/radius/routes/admins.py:436
+#: app/radius/routes/admins.py:466
 msgid "رجوع إلى الدور"
 msgstr ""
 
@@ -71245,7 +71256,7 @@ msgstr ""
 msgid "رقم إصدار الـ API. نقطة عامة لا تحتاج توكنًا."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:241
+#: app/templates/radius/admins_list.html:243
 msgid "رقم احتياطي إن وجد — اختياري."
 msgstr ""
 
@@ -71312,7 +71323,7 @@ msgstr ""
 msgid "رقم الجوال أو كلمة المرور غير صحيحة."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:236
+#: app/templates/radius/admins_list.html:238
 msgid "رقم الجوال الأساسي للتواصل — اختياري."
 msgstr ""
 
@@ -73293,7 +73304,7 @@ msgstr ""
 msgid "سجلّ الجلسات"
 msgstr ""
 
-#: app/api/permission_guard.py:733
+#: app/api/permission_guard.py:734
 msgid "سجلّ الراديوس"
 msgstr ""
 
@@ -74263,6 +74274,10 @@ msgid ""
 "«عدد الأجهزة المسموحة»."
 msgstr ""
 
+#: app/templates/radius/_perm_labels.html:145
+msgid "سقوف دَين وسلفة المدراء"
+msgstr ""
+
 #: app/templates/radius/docs_user_groups.html:441
 msgid "سكان البرج الشمالي"
 msgstr ""
@@ -74765,11 +74780,6 @@ msgstr ""
 
 #: app/templates/admin/_sidebar.html:1036
 msgid "سوبر"
-msgstr ""
-
-#: app/templates/radius/admins_form.html:139
-#: app/templates/radius/admins_list.html:202
-msgid "سوبر يوزر (كل الصلاحيات)"
 msgstr ""
 
 #: app/templates/radius/settings_page.html:251
@@ -75722,11 +75732,11 @@ msgstr ""
 msgid "شحن محفظة مستخدم الكروت بواسطة %(actor)s"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:152
+#: app/templates/radius/_perm_labels.html:154
 msgid "شحن محفظة مستخدم المتجر"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:142
+#: app/templates/radius/_perm_labels.html:143
 msgid "شحن محفظة مشغّل"
 msgstr ""
 
@@ -76929,7 +76939,7 @@ msgstr ""
 msgid "صلاحيات غير كافية"
 msgstr ""
 
-#: app/radius/routes/admins.py:435
+#: app/radius/routes/admins.py:465
 msgid "صلاحيات غير معروفة: "
 msgstr ""
 
@@ -76939,6 +76949,10 @@ msgstr ""
 
 #: app/templates/radius/mt_permission_matrix.html:171
 msgid "صلاحيات معرفة"
+msgstr ""
+
+#: app/templates/radius/business_operator_profile.html:188
+msgid "صلاحيات هذا المدير كلها من مسمّاه الوظيفي"
 msgstr ""
 
 #: app/radius/services/permission_labels.py:124
@@ -77265,7 +77279,7 @@ msgstr ""
 msgid "ضبط اتصال المايكروتيك"
 msgstr ""
 
-#: app/api/permission_guard.py:727
+#: app/api/permission_guard.py:728
 msgid "ضبط السرعات جماعيًّا"
 msgstr ""
 
@@ -77307,7 +77321,7 @@ msgid ""
 "خدمة المصادقة."
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:143
+#: app/templates/radius/_perm_labels.html:144
 msgid "ضبط صلاحيات المشغّلين"
 msgstr ""
 
@@ -78897,7 +78911,7 @@ msgstr ""
 msgid "عدد البطاقات يجب أن يكون 1 فأكثر."
 msgstr ""
 
-#: app/radius/routes/cards.py:3662 app/radius/services/card_pricing.py:29
+#: app/radius/routes/cards.py:3668 app/radius/services/card_pricing.py:29
 msgid "عدد البطاقات يجب أن يكون أكبر من صفر."
 msgstr ""
 
@@ -79372,12 +79386,6 @@ msgid ""
 "مقفلة على العروض القائمة حفاظًا على الكروت المُصدَرة."
 msgstr ""
 
-#: app/templates/radius/business_operator_profile.html:191
-msgid ""
-"عدّل الدور لتطبيقه على كل مدرائه دفعةً؛ وما تضبطه هنا تجاوزٌ فرديّ لهذا "
-"المدير فقط."
-msgstr ""
-
 #: app/templates/radius/hotspot_errors.html:36
 msgid ""
 "عدّل النصوص العربية التي تظهر للمشترك مكان رسالة الخطأ على صفحة الدخول. "
@@ -79534,7 +79542,7 @@ msgid ""
 "وحدة."
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:121
+#: app/templates/radius/_perm_labels.html:122
 msgid "عرض أجهزة الشبكة"
 msgstr ""
 
@@ -79550,7 +79558,7 @@ msgstr ""
 msgid "عرض أرخص — تعويض أيام إضافية"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:117
+#: app/templates/radius/_perm_labels.html:118
 msgid "عرض أسعار المدراء"
 msgstr ""
 
@@ -79587,7 +79595,7 @@ msgstr ""
 msgid "عرض الأقسام غير المصرّح بها، منع الماك العشوائي للمشتركين."
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:164
+#: app/templates/radius/_perm_labels.html:166
 msgid "عرض الإعدادات"
 msgstr ""
 
@@ -79599,7 +79607,7 @@ msgstr ""
 msgid "عرض الاستهلاك (تحميل/رفع/وقت)"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:112
+#: app/templates/radius/_perm_labels.html:113
 msgid "عرض الباقات"
 msgstr ""
 
@@ -79623,7 +79631,7 @@ msgstr ""
 msgid "عرض التفاصيل المتقدمة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:145
+#: app/templates/radius/_perm_labels.html:147
 msgid "عرض التقارير"
 msgstr ""
 
@@ -79632,7 +79640,7 @@ msgstr ""
 msgid "عرض التقرير"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:135
+#: app/templates/radius/_perm_labels.html:136
 msgid "عرض الجلسات"
 msgstr ""
 
@@ -79645,7 +79653,7 @@ msgstr ""
 msgid "عرض الحظر"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:126
+#: app/templates/radius/_perm_labels.html:127
 msgid "عرض الراوترات"
 msgstr ""
 
@@ -79692,7 +79700,7 @@ msgstr ""
 msgid "عرض اللقطة #"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:148
+#: app/templates/radius/_perm_labels.html:150
 msgid "عرض المتجر الإلكتروني"
 msgstr ""
 
@@ -79708,7 +79716,7 @@ msgstr ""
 msgid "عرض المحتوى"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:138
+#: app/templates/radius/_perm_labels.html:139
 msgid "عرض المدراء"
 msgstr ""
 
@@ -79791,7 +79799,7 @@ msgid ""
 "صيانة الجمعة ٢ظهرًا"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:166
+#: app/templates/radius/_perm_labels.html:168
 msgid "عرض سجل التدقيق"
 msgstr ""
 
@@ -82750,7 +82758,7 @@ msgstr ""
 msgid "غير مكتملة الضبط"
 msgstr ""
 
-#: app/radius/services/manager_grants.py:2016
+#: app/radius/services/manager_grants.py:2008
 msgid "غير ممنوح"
 msgstr ""
 
@@ -85785,7 +85793,7 @@ msgstr ""
 msgid "قائمة الأحداث"
 msgstr ""
 
-#: app/radius/routes/admins.py:553
+#: app/radius/routes/admins.py:583
 msgid "قائمة الأدوار"
 msgstr ""
 
@@ -87148,7 +87156,7 @@ msgid "قطع جلسة مشترك"
 msgstr ""
 
 #: app/radius/services/manager_grants.py:333
-#: app/templates/radius/_perm_labels.html:136
+#: app/templates/radius/_perm_labels.html:137
 msgid "قطع جلسة نشطة"
 msgstr ""
 
@@ -87836,7 +87844,7 @@ msgid "قيم غير صحيحة"
 msgstr ""
 
 #: app/radius/routes/cards.py:2162 app/radius/routes/cards.py:2248
-#: app/radius/routes/cards.py:2469 app/radius/routes/cards.py:3797
+#: app/radius/routes/cards.py:2469 app/radius/routes/cards.py:3803
 #, python-format
 msgid "قيم غير صحيحة: %(e)s"
 msgstr ""
@@ -88866,7 +88874,7 @@ msgstr ""
 msgid "كشف اللوب عبر مجس DHCP على منافذ الزبائن"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:133
+#: app/templates/radius/_perm_labels.html:134
 msgid "كشف بيانات الراوتر الحسّاسة"
 msgstr ""
 
@@ -88896,7 +88904,7 @@ msgstr ""
 msgid "كشف عبر صف الترويسة"
 msgstr ""
 
-#: app/templates/radius/_perm_labels.html:162
+#: app/templates/radius/_perm_labels.html:164
 msgid "كشف كلمات السر"
 msgstr ""
 
@@ -90263,7 +90271,7 @@ msgstr ""
 #: app/radius/services/subscriber_form_fields.py:67
 #: app/radius/templates/radius/vpn_accounts.html:197
 #: app/templates/radius/admins_form.html:84
-#: app/templates/radius/admins_list.html:218
+#: app/templates/radius/admins_list.html:220
 #: app/templates/radius/card_marketplace_package_file.html:95
 #: app/templates/radius/card_marketplace_package_file.html:140
 #: app/templates/radius/card_users.html:186
@@ -90615,7 +90623,7 @@ msgid "كلمة مرور خاطئة"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:86
-#: app/templates/radius/admins_list.html:220
+#: app/templates/radius/admins_list.html:222
 #: app/templates/radius/mt_form.html:83
 msgid "كلمة مرور قوية"
 msgstr ""
@@ -91953,6 +91961,10 @@ msgid ""
 "الإعدادات هو %(available)s — زِد طول اسم المستخدم أو غيّر البادئة."
 msgstr ""
 
+#: app/radius/routes/admins.py:178
+msgid "لا تملك «شحن محفظة مشغّل» — أُنشئ المدير بلا رصيد."
+msgstr ""
+
 #: app/templates/admin/forbidden.html:12
 msgid "لا تملك إذنًا لهذه الصفحة"
 msgstr ""
@@ -93279,6 +93291,12 @@ msgstr ""
 msgid "لا صفوف داخل هذه اللقطة."
 msgstr ""
 
+#: app/templates/radius/business_operator_profile.html:191
+msgid ""
+"لا صلاحيات منفردة للحساب: لتغييرها غيّر المسمّى من صفحة المدير، أو عدّل "
+"المسمّى نفسه فيُطبَّق على كل من يحمله. هنا المحفظة والحدود الرقميّة فقط."
+msgstr ""
+
 #: app/templates/radius/notification_sounds.html:233
 msgid "لا صوت مخصّص لهذا الحدث بعد."
 msgstr ""
@@ -93592,7 +93610,7 @@ msgstr ""
 msgid "لا يلزم اعتماد"
 msgstr ""
 
-#: app/radius/routes/admins.py:543
+#: app/radius/routes/admins.py:573
 msgid "لا يمكن أرشفة دور النظام."
 msgstr ""
 
@@ -93721,11 +93739,11 @@ msgid ""
 "إلى باقةٍ أخرى أوّلًا."
 msgstr ""
 
-#: app/radius/routes/admins.py:551
+#: app/radius/routes/admins.py:581
 msgid "لا يمكن حذف الدور"
 msgstr ""
 
-#: app/radius/routes/admins.py:552
+#: app/radius/routes/admins.py:582
 #, python-format
 msgid ""
 "لا يمكن حذف الدور «%(name)s»: مُسنَد إلى %(in_use)s مدير. انقلهم إلى دورٍ"
@@ -93772,7 +93790,7 @@ msgstr ""
 msgid "لا يمكنك إدارة توكن لم تُنشئه أنت."
 msgstr ""
 
-#: app/radius/auth/owner.py:191
+#: app/radius/auth/owner.py:193
 msgid "لا يمكنك إسناد دورٍ يحمل صلاحيات لا تملكها: "
 msgstr ""
 
@@ -93784,19 +93802,19 @@ msgstr ""
 msgid "لا يمكنك إنشاء توكن بصلاحيات أعلى من صلاحياتك."
 msgstr ""
 
-#: app/radius/auth/owner.py:183
+#: app/radius/auth/owner.py:185
 msgid "لا يمكنك تعديل حساب المالك أو الشريك."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:183
+#: app/radius/routes/manager_distributor_ops.py:191
 msgid "لا يمكنك تعديل صلاحياتك بنفسك — يعدّلها المالك."
 msgstr ""
 
-#: app/api/v1/admins.py:418 app/radius/routes/admins.py:325
+#: app/api/v1/admins.py:418 app/radius/routes/admins.py:355
 msgid "لا يمكنك حذف حسابك أنت."
 msgstr ""
 
-#: app/radius/auth/owner.py:201
+#: app/radius/auth/owner.py:203
 msgid "لا يمكنك منح صلاحيات لا تملكها: "
 msgstr ""
 
@@ -95784,7 +95802,7 @@ msgstr ""
 msgid "لم يُحفَظ التعديل"
 msgstr ""
 
-#: app/radius/routes/admins.py:434
+#: app/radius/routes/admins.py:464
 msgid "لم يُحفَظ الدور"
 msgstr ""
 
@@ -95960,7 +95978,7 @@ msgid ""
 "مستخدمين بدون كلمات مرور."
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:306
+#: app/radius/routes/manager_distributor_ops.py:319
 msgid "لم يُمنَح «مسموح» لما لا تملكه أنت: "
 msgstr ""
 
@@ -100070,7 +100088,7 @@ msgstr ""
 msgid "مدير عام"
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:556
+#: app/radius/routes/manager_distributor_ops.py:569
 #, python-format
 msgid "مدير محذوف (#%(aid)s)"
 msgstr ""
@@ -101528,7 +101546,7 @@ msgid "مسلَّمة (بحوزة المشترك)"
 msgstr ""
 
 #: app/radius/services/license_admin_capacity.py:85
-#: app/radius/services/manager_grants.py:1764
+#: app/radius/services/manager_grants.py:1756
 #: app/templates/radius/business_operator_profile.html:252
 #: app/templates/radius/business_operator_profile.html:262
 #: app/templates/radius/roles_form.html:454
@@ -103269,7 +103287,7 @@ msgid "معلومات الاتصال للفنّي"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:105
-#: app/templates/radius/admins_list.html:226
+#: app/templates/radius/admins_list.html:228
 msgid "معلومات الاتصال والملف الشخصي"
 msgstr ""
 
@@ -104387,7 +104405,7 @@ msgid "ملاحظات داخلية تظهر للمدير فقط..."
 msgstr ""
 
 #: app/templates/radius/admins_form.html:125
-#: app/templates/radius/admins_list.html:249
+#: app/templates/radius/admins_list.html:251
 msgid "ملاحظات على الملف الشخصي"
 msgstr ""
 
@@ -105043,7 +105061,7 @@ msgstr ""
 msgid "ممتازة"
 msgstr ""
 
-#: app/radius/services/manager_grants.py:2016
+#: app/radius/services/manager_grants.py:2008
 msgid "ممنوح"
 msgstr ""
 
@@ -105051,7 +105069,7 @@ msgstr ""
 msgid "ممنوحة"
 msgstr ""
 
-#: app/radius/services/manager_grants.py:1764
+#: app/radius/services/manager_grants.py:1756
 #: app/templates/radius/business_operator_profile.html:258
 #: app/templates/radius/business_operator_profile.html:262
 #: app/templates/radius/roles_form.html:458
@@ -106012,7 +106030,7 @@ msgstr ""
 msgid "منح المزوّد"
 msgstr ""
 
-#: app/radius/routes/manager_distributor_ops.py:414
+#: app/radius/routes/manager_distributor_ops.py:427
 msgid "منح دور «مدير عام» مقصورٌ على المالك أو الشريك."
 msgstr ""
 
@@ -106032,17 +106050,17 @@ msgstr ""
 msgid "منح سلفة:"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:145
-#: app/templates/radius/admins_list.html:207
+#: app/templates/radius/admins_form.html:140
+#: app/templates/radius/admins_list.html:209
 msgid "منح صلاحيات المالك (شريك)"
 msgstr ""
 
-#: app/radius/routes/admins.py:183
-msgid "منح صلاحيات المالك (شريك) أو «سوبر يوزر» مقصورٌ على المالك أو الشريك."
+#: app/api/v1/admins.py:294
+msgid "منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك."
 msgstr ""
 
-#: app/api/v1/admins.py:294 app/radius/auth/owner.py:181
-msgid "منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك."
+#: app/radius/auth/owner.py:183 app/radius/routes/admins.py:212
+msgid "منح صلاحيات المالك (شريك) مقصورٌ على المالك أو الشريك."
 msgstr ""
 
 #: app/templates/radius/mt_permission_matrix.html:204
@@ -106463,7 +106481,7 @@ msgstr ""
 msgid "مهام الطباعة"
 msgstr ""
 
-#: app/templates/radius/admins_list.html:251
+#: app/templates/radius/admins_list.html:253
 msgid "مهام المدير، نطاق عمله، أي شروط خاصة..."
 msgstr ""
 
@@ -107333,7 +107351,7 @@ msgid ""
 "بوّابة تجديد أسيرة."
 msgstr ""
 
-#: app/radius/services/manager_grants.py:1834
+#: app/radius/services/manager_grants.py:1826
 msgid "مُطفأ في أساس الدور"
 msgstr ""
 
@@ -108607,7 +108625,7 @@ msgstr ""
 msgid "نطاق الرؤية والإشراف"
 msgstr ""
 
-#: app/radius/services/manager_grants.py:1883
+#: app/radius/services/manager_grants.py:1875
 msgid "نطاق الرؤية والحماية الماليّة"
 msgstr ""
 
@@ -110120,7 +110138,7 @@ msgid "نوع العنصر المعني بالتحقيق — يُكتب بمعر
 msgstr ""
 
 #: app/radius/routes/recycle_bin.py:219
-#: app/radius/services/recycle_restore_policy.py:48
+#: app/radius/services/recycle_restore_policy.py:51
 msgid "نوع العنصر غير مدعوم في سلة المحذوفات."
 msgstr ""
 
@@ -110429,7 +110447,7 @@ msgid "ه"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:116
-#: app/templates/radius/admins_list.html:239
+#: app/templates/radius/admins_list.html:241
 msgid "هاتف آخر"
 msgstr ""
 
@@ -110437,7 +110455,7 @@ msgstr ""
 msgid "هاتف التواصل للتجديد"
 msgstr ""
 
-#: app/templates/radius/admins_list.html:240
+#: app/templates/radius/admins_list.html:242
 msgid "هاتف بديل"
 msgstr ""
 
@@ -110545,7 +110563,7 @@ msgstr ""
 msgid "هذا الإجراء متاح لمدير النظام الأعلى فقط."
 msgstr ""
 
-#: app/api/permission_guard.py:825 app/radius/routes/blueprint.py:1345
+#: app/api/permission_guard.py:826 app/radius/routes/blueprint.py:1345
 msgid "هذا الإجراء مقصور على المالك أو الشريك."
 msgstr ""
 
@@ -110636,7 +110654,7 @@ msgstr ""
 msgid "هذا الحساب مرتبط بجهاز واحد فقط — عنوان جهازك غير مطابق"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:155
+#: app/templates/radius/admins_form.html:150
 msgid "هذا الحساب هو المالك الأصليّ للشبكة — محميّ، لا يُعدَّل مستواه ولا يُحذف."
 msgstr ""
 
@@ -112885,7 +112903,7 @@ msgid "وسوم"
 msgstr ""
 
 #: app/templates/radius/admins_form.html:120
-#: app/templates/radius/admins_list.html:244
+#: app/templates/radius/admins_list.html:246
 #: app/templates/radius/devices_form.html:109
 msgid "وسوم (CSV)"
 msgstr ""
@@ -115656,7 +115674,7 @@ msgid ""
 " الحدّ»: رفض/استبدال كما في المشتركين. إعداد الدفعة الفرديّ يَتجاوز هذا."
 msgstr ""
 
-#: app/radius/services/manager_grants.py:1832
+#: app/radius/services/manager_grants.py:1824
 msgid "ينقص الدور المفتاح "
 msgstr ""
 
@@ -116319,7 +116337,7 @@ msgid ""
 "بالقائمة. المنطقة الزمنية أعلاه تتقدّم عليه دائمًا."
 msgstr ""
 
-#: app/templates/radius/admins_list.html:231
+#: app/templates/radius/admins_list.html:233
 msgid "يُستخدم في المراسلات والتنبيهات — اختياري."
 msgstr ""
 
@@ -116361,11 +116379,8 @@ msgstr ""
 msgid "يُسجَّل بانتظار مراجعتك وتُفتح له تذكرة متابعة."
 msgstr ""
 
-#: app/templates/radius/admins_form.html:141
-msgid ""
-"يُسند دور «مدير عام»: كل الصلاحيات والمنح ورؤية كل المشتركين وإدارة "
-"المدراء والأدوار — عدا ما يخصّ المالك وحده (الإعدادات، النسخ الاحتياطيّ، "
-"الإبطال، التوكنات، تصفير البيانات، منح الشراكة)."
+#: app/templates/radius/admins_list.html:198
+msgid "يُشحن في محفظة المدير عند إنشائه (نقدًا). اتركه فارغًا لمدير بلا رصيد."
 msgstr ""
 
 #: app/templates/radius/users_list.html:2160
@@ -116815,6 +116830,8 @@ msgstr ""
 msgid "— اختر مشتركًا —"
 msgstr ""
 
+#: app/templates/radius/admins_form.html:62
+#: app/templates/radius/admins_list.html:187
 #: app/templates/radius/cards_generate.html:376
 #: app/templates/radius/finance_billing.html:270
 #: app/templates/radius/finance_billing.html:348
@@ -117004,8 +117021,6 @@ msgstr ""
 msgid "— بدون موزع —"
 msgstr ""
 
-#: app/templates/radius/admins_form.html:62
-#: app/templates/radius/admins_list.html:187
 #: app/templates/radius/admins_profile_summary.html:116
 #: app/templates/radius/docs_add_subscriber.html:463
 #: app/templates/radius/docs_add_subscriber.html:470
