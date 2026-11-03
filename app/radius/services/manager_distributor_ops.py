@@ -249,7 +249,8 @@ class ManagerDistributorOpsService:
                 role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=self.tenant_id)
             except Exception:  # noqa: BLE001 — fail-open: لا وراثة على خطأ
                 role_flags = {}
-        out["permissions"] = {**DEFAULT_PERMISSIONS, **role_flags, **_load(out.get("permissions_json"))}
+        # المالك 03/11: المسمّى الوظيفي وحده يمنح؛ أعلام المدير الفرديّة لا تُقرأ
+        out["permissions"] = {**DEFAULT_PERMISSIONS, **role_flags} if etype == "manager"             else {**DEFAULT_PERMISSIONS, **_load(out.get("permissions_json"))}
         out["limits"] = {**DEFAULT_LIMITS, **_load(out.get("limits_json"))}
         out["credit_limit"] = minor_to_money(out.get("credit_limit_minor") or 0)
         out["require_approval_above"] = minor_to_money(out.get("require_approval_above_minor") or 0)
@@ -441,8 +442,10 @@ class ManagerDistributorOpsService:
                 role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=self.tenant_id)
             except Exception:  # noqa: BLE001 — fail-open: لا وراثة على خطأ
                 role_flags = {}
-        # الافتراض ← أعلام الدور الموروثة ← تجاوز المدير الفرديّ (المدير يَغلب).
-        effective = {**DEFAULT_PERMISSIONS, **role_flags, **(mgr_raw or {})}
+        # المدير: الافتراض ← أعلام دوره فقط (المالك 03/11: لا صلاحيات منفردة).
+        # الموزّع لا دور له: أعلامه المخزَّنة كما كانت.
+        effective = ({**DEFAULT_PERMISSIONS, **role_flags} if etype == "manager"
+                     else {**DEFAULT_PERMISSIONS, **(mgr_raw or {})})
         return bool(effective.get(permission))
 
     def list_scope(self, *, entity_type: str,

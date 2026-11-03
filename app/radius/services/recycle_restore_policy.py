@@ -19,8 +19,11 @@ RESTORE_PERMISSION = {
     "subscribers": "users.create",
     "access_plans": "plans.create",
     "nas_devices": "nas.create",
+    # المالك 03/11: استعادة المدراء والأدوار بصلاحية «تعديل مدير» لا للمالك وحده
+    "admins": "admins.edit",
+    "roles": "admins.edit",
 }
-OWNER_ONLY_TABLES = frozenset({"admins", "roles"})
+OWNER_ONLY_TABLES: frozenset = frozenset()
 
 _OWNER_ONLY_AR = N_("استعادة المدراء والأدوار مقصورة على المالك أو الشريك.")
 

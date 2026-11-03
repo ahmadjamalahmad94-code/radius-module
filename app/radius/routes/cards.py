@@ -1437,6 +1437,14 @@ def _is_owner_session() -> bool:
     return bool(_session.get("is_super_admin"))
 
 
+def _can_delete_permanently() -> bool:
+    """الحذف النهائيّ (بلا رجعة): المالك/الشريك، أو مَن يحمل مسمّاه الوظيفي
+    صلاحية «حذف نهائيّ» (cards.purge) — المالك 03/11: الصلاحيات تُنفَّذ متى
+    تفعّلت، لا للمالك وحده."""
+    from flask import session as _session
+    return _is_owner_session() or "cards.purge" in (_session.get("permissions") or ())
+
+
 def _selected_batch_ids() -> list[int]:
     ids: list[int] = []
     for raw in request.form.getlist("batch_ids"):
@@ -1473,9 +1481,9 @@ def cards_batches_bulk():
             flash(_tr('تمت استعادة %(changed)s حزمة مؤرشفة.', changed=changed), "success")
         elif action == "purge":
             # حذف نهائيّ (بلا رجعة): يمحو الحزمة وكلّ بطاقاتها وأثرها من القاعدة.
-            # p01/D25: عمليّة لا رجعة فيها → للمالك/المالك المشارك وحده، لا
-            # لمجرّد حامل cards.batch_ops + bulk.ops.
-            if not _is_owner_session():
+            # p01/D25: عمليّة لا رجعة فيها → لا تكفيها cards.batch_ops + bulk.ops؛
+            # المالك 03/11: صلاحيتها المستقلّة cards.purge في المسمّى الوظيفي.
+            if not _can_delete_permanently():
                 abort(403)
             from ..db.repos import cards_repo as _cards_repo
             removed_cards = 0
@@ -1815,8 +1823,9 @@ def _handle_card_operation():
             query = ""
         elif action == "delete_permanent":
             # Hard-delete path retained for the recycle bin screen.
-            # p01/D25: irreversible → owner / co-owner only.
-            if not _is_owner_session():
+            # p01/D25: irreversible → owner / co-owner, or the cards.purge key
+            # of the job title (owner 03/11).
+            if not _can_delete_permanently():
                 abort(403)
             confirm_delete = _form_str("confirm_delete")
             if confirm_delete != "حذف البطاقة" and confirm_delete.upper() != "DELETE":
@@ -3602,7 +3611,10 @@ def cards_offer_edit(offer_id: int):
 
 
 def cards_offer_visibility(offer_id: int):
-    if not is_super_admin():
+    # المالك 03/11: من يُمنح «تعديل العرض» في مسمّاه يُشارك/يُفعّل العرض أيضًا
+    from ..services import manager_grants as _mg
+    if not is_super_admin() and not _mg.action_allowed(
+            session.get("admin_id"), "offer", "edit", tenant_id=_tid()):
         return _deny_non_super()
     try:
         ids = [int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()]
@@ -3614,7 +3626,10 @@ def cards_offer_visibility(offer_id: int):
 
 
 def cards_offer_toggle(offer_id: int):
-    if not is_super_admin():
+    # المالك 03/11: من يُمنح «تعديل العرض» في مسمّاه يُشارك/يُفعّل العرض أيضًا
+    from ..services import manager_grants as _mg
+    if not is_super_admin() and not _mg.action_allowed(
+            session.get("admin_id"), "offer", "edit", tenant_id=_tid()):
         return _deny_non_super()
     try:
         svc = _offers_service()

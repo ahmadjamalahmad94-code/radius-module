@@ -97,9 +97,9 @@ def test_create_preset_from_manager_and_apply(app):
         assert mg.action_permitted(dst, "subscriber.free_days", tenant_id=1) is False
         mp.apply_preset(int(preset["id"]), dst, tenant_id=1)
     with app.app_context():
-        # destination now matches the preset (= source's grants)
-        assert mg.action_permitted(dst, "subscriber.free_days", tenant_id=1) is True
-        assert mg.action_permitted(dst, "store.deposit_approve", tenant_id=1) is True
+        # owner 03/11: a preset carries the numeric limits (they stay each
+        # manager's own) but grants no permission — those come from the job title
+        assert mg.action_permitted(dst, "subscriber.free_days", tenant_id=1) is False
         assert mg.limit_value(dst, "max_subscribers", tenant_id=1) == 9
 
 

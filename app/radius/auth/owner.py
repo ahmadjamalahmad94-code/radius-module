@@ -176,9 +176,11 @@ def assert_can_modify_admin(actor_id: Optional[int], target_id: int, *,
         if deleting:
             raise OwnerGuardError(_tr("لا يمكن حذف المالك الأصليّ للشبكة."))
         raise OwnerGuardError(_tr("حساب المالك الأصليّ محميّ — لا يعدّله إلّا صاحبه."))
-    if (co_owner_change or super_change) and not actor_owner:
+    # المالك 03/11: «مدير عام» مسمّى وظيفيّ كغيره — يُسنده من يملك كل صلاحياته
+    # (قاعدة «لا تصعيد» أدناه). الشراكة وحدها تبقى للمالك/الشريك.
+    if co_owner_change and not actor_owner:
         raise OwnerGuardError(
-            _tr("منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك."))
+            _tr("منح صلاحيات المالك (شريك) مقصورٌ على المالك أو الشريك."))
     if not actor_owner and not is_self and is_owner_like(tid):
         raise OwnerGuardError(_tr("لا يمكنك تعديل حساب المالك أو الشريك."))
     if new_role_id and not actor_owner:

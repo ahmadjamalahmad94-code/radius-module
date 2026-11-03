@@ -46,3 +46,30 @@ def role_keys(admin_id: int) -> list:
 
     admin = admins_repo.get_admin(int(admin_id))
     return sorted(admins_repo.admin_permissions(admin)) if admin else []
+
+
+def set_role_grants(admin_id: int, extra: dict) -> None:
+    """Owner 03/11: grants live on the job title only. Give ``admin_id`` a
+    private copy of his role whose granular blob carries ``extra`` merged in
+    (``{"_actions": {...}}`` → action_grants, ``{"field_grants": {...}}`` …)."""
+    import uuid
+    from app.radius.db.repos import admins_repo
+    from app.radius.services import manager_grants as mg
+
+    admin = admins_repo.get_admin(int(admin_id))
+    old = admins_repo.get_role(int(admin.role_id)) if admin and admin.role_id else None
+    keys = tuple(getattr(old, "permissions", ()) or ())
+    blob = dict(admins_repo.get_role_granular(int(old.id)) or {}) if old else {}
+    role = admins_repo.create_role(name="g_" + uuid.uuid4().hex[:8], permissions=keys)
+    for k, v in extra.items():
+        if k == "_actions":
+            ag = dict(blob.get("action_grants") or {})
+            ag["_actions"] = {**dict(ag.get("_actions") or {}), **v}
+            blob["action_grants"] = ag
+        else:
+            cur = dict(blob.get(k) or {})
+            cur.update(v)
+            blob[k] = cur
+    admins_repo.set_role_granular(role.id, blob)
+    admins_repo.update_admin(int(admin_id), role_id=role.id)
+    mg._invalidate_cache()
