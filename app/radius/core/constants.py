@@ -219,6 +219,9 @@ PERM_CARDS_VERIFY = "cards.verify"                 # فاحص البطاقات: 
 PERM_CARDS_RESTORE = "cards.restore"               # استعادة من سلة المحذوفات (recycle_bin_restore)
 PERM_CARDS_RECHARGE = "cards.recharge"             # حزم بطاقات الشحن (cards_recharge_*)
 PERM_CARDS_PRINT = "cards.print"                   # حزم الطباعة (cards_print_*)
+# المالك 03/11: الحذف النهائيّ (بلا رجعة) للحِزم والبطاقات وتفريغ السلّة — صار
+# صلاحيةً تُمنح بالمسمّى الوظيفي بدل أن يكون للمالك وحده.
+PERM_CARDS_PURGE = "cards.purge"                   # حذف نهائيّ: cards_batches_bulk purge + checker delete_permanent + recycle_bin_purge
 
 # ─── أسعار العروض للمدراء (/admins/pricing — migration 098) ───
 PERM_ADMIN_PRICING_VIEW = "admin_pricing.view"     # عرض صفحة الأسعار (admin_pricing_page)
@@ -228,6 +231,7 @@ PERM_ADMIN_PRICING_RESET = "admin_pricing.reset"   # إعادة للسعر ال�
 # ─── محافظ المدراء/الموزعين (business operators) ───
 PERM_ADMINS_DEPOSIT = "admins.deposit_balance"     # شحن محفظة مشغّل (business_operator_recharge)
 PERM_ADMINS_POLICY = "admins.policy"               # ضبط صلاحيات/حدود المشغّل (business_operator_policy)
+PERM_ADMINS_CREDIT_CAPS = "admins.credit_caps"     # سقوف دَين/سلفة المدير (admins_update credit caps) — المالك 03/11
 
 # ─── التقارير ───
 PERM_REPORTS_VIEW = "reports.view"                 # كل صفحات /reports (الجلسات، MAC، أحداث المدراء…)
@@ -280,12 +284,12 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_ONLINE_VIEW, PERM_ONLINE_DISCONNECT, PERM_ONLINE_LOCK_MAC, PERM_ONLINE_LOCK_IP,
     PERM_CARDS_VIEW, PERM_CARDS_GENERATE, PERM_CARDS_REVOKE,
     PERM_CARDS_EDIT_BATCH, PERM_CARDS_BATCH_OPS, PERM_CARDS_IMPORT, PERM_CARDS_VERIFY,
-    PERM_CARDS_RESTORE, PERM_CARDS_RECHARGE, PERM_CARDS_PRINT,
+    PERM_CARDS_RESTORE, PERM_CARDS_RECHARGE, PERM_CARDS_PRINT, PERM_CARDS_PURGE,
     PERM_PLANS_VIEW, PERM_PLANS_CREATE, PERM_PLANS_EDIT, PERM_PLANS_DELETE,
     PERM_NAS_VIEW, PERM_NAS_CREATE, PERM_NAS_EDIT, PERM_NAS_DELETE,
     PERM_SESSIONS_VIEW, PERM_SESSIONS_DISCONNECT,
     PERM_ADMINS_VIEW, PERM_ADMINS_CREATE, PERM_ADMINS_EDIT, PERM_ADMINS_DELETE,
-    PERM_ADMINS_DEPOSIT, PERM_ADMINS_POLICY,
+    PERM_ADMINS_DEPOSIT, PERM_ADMINS_POLICY, PERM_ADMINS_CREDIT_CAPS,
     PERM_ADMIN_PRICING_VIEW, PERM_ADMIN_PRICING_EDIT, PERM_ADMIN_PRICING_RESET,
     PERM_REPORTS_VIEW, PERM_REPORTS_FINANCE,
     PERM_STORE_VIEW, PERM_STORE_PACKAGE_ADD, PERM_STORE_USER_ADD, PERM_STORE_USER_EDIT,

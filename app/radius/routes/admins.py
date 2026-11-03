@@ -160,6 +160,34 @@ def _can_grant_owner() -> bool:
     return is_owner_like()
 
 
+def _opening_balance(a) -> None:
+    """المالك 03/11: «إنشاء مدير = مسمّاه ورصيده». رصيدٌ افتتاحيّ يُشحن في
+    محفظة المدير الجديد بنفس مسار «شحن محفظة مشغّل» — للمالك أو لحامل
+    ``admins.deposit_balance``؛ غير ذلك يُتجاهَل مع تنبيه (والمدير يُنشأ)."""
+    raw = (request.form.get("opening_balance") or "").strip()
+    try:
+        amount = float(raw or 0)
+    except (TypeError, ValueError):
+        flash(_tr("الرصيد الافتتاحيّ ليس رقمًا — أُنشئ المدير بلا رصيد."), "warning")
+        return
+    if amount <= 0:
+        return
+    from ..auth.owner import is_owner_like
+    from ..auth.ui_permissions import can as _can
+    if not (is_owner_like() or _can("admins.deposit_balance")):
+        flash(_tr("لا تملك «شحن محفظة مشغّل» — أُنشئ المدير بلا رصيد."), "warning")
+        return
+    try:
+        from flask import session as _session
+        from ..services.manager_distributor_ops import ManagerDistributorOpsService
+        ManagerDistributorOpsService(
+            tenant_id=int(_session.get("tenant_id") or 1)).recharge_wallet(
+            entity_type="manager", entity_id=int(a.id), amount=raw,
+            method=request.form.get("opening_method") or "cash", actor=_actor())
+    except Exception as e:  # noqa: BLE001 — the admin exists; say what failed
+        flash(_tr("أُنشئ المدير لكن تعذّر شحن رصيده: ") + str(e), "warning")
+
+
 def admins_create():
     svc = get_admins_service()
     from ..auth.owner import OwnerGuardError, assert_role_within_actor
@@ -173,14 +201,15 @@ def admins_create():
         role_id = _super_role_id()
     # دورٌ مجهول يُرفَض (422) — لا يُنشأ مديرٌ بدورٍ معلَّق. بلا دور = الأقلّ
     # صلاحيةً (services.admins.create_admin)، أبدًا لا «مدير عام».
-    if role_id is not None and (role_id <= 0 or admins_repo.get_role(int(role_id)) is None):
-        flash(_tr("الدور المحدد غير موجود — اختر دورًا للمدير."), "error")
+    # المالك 03/11: المدير يورث مسمّاه الوظيفي فقط — فالمسمّى إلزاميّ.
+    if role_id is None or role_id <= 0 or admins_repo.get_role(int(role_id)) is None:
+        flash(_tr("اختر المسمّى الوظيفي للمدير — منه وحده تأتي صلاحياته."), "error")
         return render_template("radius/admins_form.html",
             admin=None, roles=svc.list_roles(), is_new=True), 422
     try:
-        if (want_super or want_co) and not _can_grant_owner():
+        if want_co and not _can_grant_owner():
             raise OwnerGuardError(
-                _tr("منح صلاحيات المالك (شريك) أو «سوبر يوزر» مقصورٌ على المالك أو الشريك."))
+                _tr("منح صلاحيات المالك (شريك) مقصورٌ على المالك أو الشريك."))
         if role_id:
             probe = type("A", (), {"role_id": role_id})()
             assert_role_within_actor(_actor_id(), admins_repo.admin_permissions(probe))
@@ -216,6 +245,7 @@ def admins_create():
         flash(str(e), "error")
         return render_template("radius/admins_form.html",
             admin=None, roles=svc.list_roles(), is_new=True), 400
+    _opening_balance(a)
     # admins-report v2 — post-CRUD trigger: notify the panel immediately so
     # the new admin appears there without waiting for the periodic worker.
     _notify_panel_of_admin_change()
@@ -262,15 +292,13 @@ def admins_update(admin_id: int):
     super_change = co_change = False
     want_co = bool(getattr(existing, "is_co_owner", False))
     if request.form.get("access_level_present"):
-        want_super = bool(request.form.get("is_super_user"))
-        cur_super = _is_super_role(existing.role_id)
-        if want_super != cur_super:
+        # المالك 03/11: «مدير عام» يُختار من قائمة المسمّيات الوظيفيّة كغيره؛
+        # خانة «سوبر يوزر» القديمة أُزيلت، فغيابها لا يُنزل أحدًا. يبقى علَم
+        # is_super_admin الخام متّسقًا مع المسمّى المختار.
+        new_rid = changes.get("role_id")
+        if new_rid and _is_super_role(new_rid) != _is_super_role(existing.role_id):
             super_change = True
-            if want_super:
-                changes["role_id"] = _super_role_id()
-            elif changes.get("role_id") in (None, _super_role_id()):
-                changes["role_id"] = admins_repo.least_privileged_role_id()
-            changes["is_super_admin"] = want_super
+            changes["is_super_admin"] = _is_super_role(new_rid)
         if not admins_repo.is_original_owner(admin_id):
             want_co = bool(request.form.get("is_co_owner"))
             co_change = want_co != bool(getattr(existing, "is_co_owner", False))
@@ -285,12 +313,14 @@ def admins_update(admin_id: int):
         flash(str(e), "error")
         return redirect(url_for("radius.admins_list"))
 
-    # ── Per-manager monetary credit caps — SUPER-ADMIN ONLY (server-side).
-    # The section is hidden for non-supers; if one POSTs the caps anyway → 403.
+    # ── Per-manager monetary credit caps: the owner, or a job title that
+    # carries «سقوف دَين وسلفة المدراء» (owner 03/11). The section is hidden
+    # for everyone else; a POST of the caps without it → 403.
     from ..auth.session_helpers import is_super_admin
+    from ..auth.ui_permissions import can as _can
     cap_changes: dict = {}
     if request.form.get("credit_caps_present"):
-        if not is_super_admin():
+        if not (is_super_admin() or _can("admins.credit_caps")):
             abort(403)
         from ..services.business_os_finance import money_to_minor
         cap_changes = {

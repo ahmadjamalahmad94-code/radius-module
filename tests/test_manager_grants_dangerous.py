@@ -62,8 +62,9 @@ def _mgr(username="m1") -> int:
 
 
 def _grant_action(mgr, key, val=True):
-    from app.radius.services import manager_grants as mg
-    mg.set_action_override(mgr, key, val, tenant_id=1)
+    # owner 03/11: grants live on the job title, not on the manager
+    from mg_test_roles import set_role_grants
+    set_role_grants(mgr, {"_actions": {key: val}})
 
 
 def _login(client, *, admin_id, is_super,
@@ -134,22 +135,28 @@ def test_reassign_field_lock(app):
     from app.radius.services import manager_grants as mg
     with app.app_context():
         m = _mgr("m_re")
-        mg.set_field_grants(m, "subscriber", ["name"], tenant_id=1)   # reassign NOT granted
+        from mg_test_roles import set_role_grants      # field locks live on the job title
+        set_role_grants(m, {"field_grants": {"subscriber": ["name"]}})   # reassign NOT granted
         assert "manager_id" in mg.reverted_attrs(m, "subscriber", tenant_id=1)
-        mg.set_field_grants(m, "subscriber", ["name", "reassign"], tenant_id=1)
+        set_role_grants(m, {"field_grants": {"subscriber": ["name", "reassign"]}})
     with app.app_context():
         assert "manager_id" not in mg.reverted_attrs(m, "subscriber", tenant_id=1)
 
 
 # ═══ config persists ════════════════════════════════════════════════════════
-def test_policy_persists_bulk_ops(app):
+def test_the_manager_page_no_longer_grants_bulk_ops(app):
+    """Owner 03/11: the manager's page saves money and numeric limits only —
+    a permission ticked there grants nothing; the job title does."""
     with app.app_context():
         m = _mgr("m_cfg")
     with app.test_client() as c:
         _login(c, admin_id=1, is_super=True, perms=("admins.policy",))
         r = c.post(f"/admin/radius/business-operators/manager/{m}/policy",
-                   data={"_csrf_token": "off-csrf", "action_bulk.ops": "1"})
+                   data={"_csrf_token": "off-csrf", "action_bulk.ops": "1",
+                         "tri_bulk.ops": "allow"})
         assert r.status_code in (302, 303)
     with app.app_context():
         from app.radius.services import manager_grants as mg
+        assert mg.action_permitted(m, "bulk.ops", tenant_id=1) is False
+        _grant_action(m, "bulk.ops")
         assert mg.action_permitted(m, "bulk.ops", tenant_id=1) is True

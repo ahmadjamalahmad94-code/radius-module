@@ -60,4 +60,7 @@ def session_can_delete_permanently() -> bool:
         return False
     if session.get("is_super_admin"):
         return True
+    # المالك 03/11: صلاحية «حذف نهائيّ» في المسمّى الوظيفي تكفي (لا مالكَ فقط)
+    if "cards.purge" in (session.get("permissions") or ()):
+        return True
     return is_front_owner(session.get("admin_id"), session.get("tenant_id"))

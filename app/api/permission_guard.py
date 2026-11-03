@@ -221,7 +221,7 @@ API_PERMISSIONS: dict[str, Spec] = {
     # «إضافة/خصم وقت» — the checker's set_time action on the web (cards.verify)
     "v1.cards_adjust_time": "web:cards_checker",
     # irreversible (p01/D25) — owner / co-owner only
-    "v1.cards_delete_permanent": SUPER,
+    "v1.cards_delete_permanent": "cards.purge",
     "v1.cards_check": "web:cards_checker_api_lookup",
 
     # ── card store users + marketplace ──
@@ -272,8 +272,9 @@ API_PERMISSIONS: dict[str, Spec] = {
     # archiving admins/roles/NAS/plans/subscribers from one generic endpoint
     # is an owner-level operation (the web archives each from its own page).
     "v1.recycle_bin_archive": SUPER,
-    # the web «حذف نهائيّ» (recycle_bin_purge) is owner-only — irreversible.
-    "v1.recycle_bin_purge": SUPER,
+    # the web «حذف نهائيّ» (recycle_bin_purge): irreversible — its own key
+    # (owner 03/11: a job title can carry it; it is no longer owner-only).
+    "v1.recycle_bin_purge": "cards.purge",
     # fix3 (F01 F4): any of the per-type restore keys reaches the handler,
     # which decides per entity type (recycle_restore_policy) + scope.
     "v1.recycle_bin_restore": "cards.restore|users.create|plans.create|nas.create",

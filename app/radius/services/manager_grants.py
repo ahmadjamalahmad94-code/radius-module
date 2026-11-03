@@ -1373,11 +1373,15 @@ def own_grants(admin_id: Optional[int], *, tenant_id: int = 1) -> dict[str, Any]
 
 
 def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
-    """يُرجع {section_access, action_grants, field_grants, flags, limits} —
-    **الأساس الموروث من الدور مدموجٌ تحت تجاوزات المدير الفرديّة**. مخزَّن لكل طلب.
+    """يُرجع {section_access, action_grants, field_grants, flags, limits} للمدير.
 
-    لا يُنشئ صفًّا (قراءة فقط، الافتراض الآمن = فارغ). محصّن: أيّ خطأ DB
-    يُرجع فارغًا (fail-open للأقسام: غياب سياسة = مفتوح، غير انحداريّ)."""
+    🔴 المالك 03/11: «المدير بيورث المسمّى الوظيفي فقط وما إله أي صلاحيات
+    منفردة». فالأعلام والأفعال والأقسام والحقول تأتي من **دوره وحده**؛ تجاوزاته
+    الفرديّة القديمة في ``manager_distributor_policies`` تبقى مخزَّنةً (للرجوع)
+    لكنّها لا تُقرأ. الحدود الرقميّة (أقصى مشتركين، سقف صرف، معدّل يوميّ…) تبقى
+    فرديّةً لكل مدير — قرار المالك (ب). مخزَّن لكل طلب.
+
+    لا يُنشئ صفًّا. محصّن: أيّ خطأ DB يُرجع أساس الدور بلا حدود."""
     empty = {"section_access": {}, "action_grants": {}, "field_grants": {},
              "flags": {}, "limits": {}}
     if not admin_id:
@@ -1386,41 +1390,29 @@ def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
     cache = getattr(g, "_mg_grants_cache", None)
     if isinstance(cache, dict) and cache.get("_key") == key:
         return cache["val"]
-    val = dict(empty)
+    limits: dict[str, Any] = {}
     try:
         from ..db.connection import db
         row = db().execute(
             """
-            SELECT section_access_json, action_grants_json, field_grants_json,
-                   permissions_json, limits_json
-            FROM manager_distributor_policies
+            SELECT limits_json FROM manager_distributor_policies
             WHERE tenant_id=? AND entity_type='manager' AND entity_id=?
             """,
             (key[0], key[1]),
         ).fetchone()
         if row:
-            val = {
-                "section_access": _load(row["section_access_json"]),
-                "action_grants": _load(row["action_grants_json"]),
-                "field_grants": _load(row["field_grants_json"]),
-                "flags": _load(row["permissions_json"]),
-                "limits": _load(row["limits_json"]),
-            }
+            limits = _load(row["limits_json"])
     except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب على خطأ DB
-        val = dict(empty)
-    # المرحلة F: المنوحات المؤقّتة — بعد تاريخ الانتهاء تُلغى مَنوحات المدير
-    # (الأعلام can_* + بوّابات الأفعال) فيَعود للأساس المقيَّد. القيود (الحدود/
-    # إخفاء الأقسام/التحكّم الحقليّ) تَبقى. السوبر يُعالَج قبل الوصول هنا.
-    if _grants_are_expired((val.get("limits") or {}).get("grants_expire_at")):
-        val = dict(val)
-        val["flags"] = {}
-        val["action_grants"] = {}
-    # وراثة الدور: ادمج أساس الدور تحت تجاوزات المدير (بعد تطبيق الانتهاء، فيَعود
-    # المدير المنتهي إلى أساس دوره لا إلى فراغ). الحدود تبقى فرديّة. غياب أساس
-    # الدور = لا تغيير (السلوك الحاليّ).
-    rg = _role_grants_for_admin(admin_id, tenant_id)
-    if rg:
-        val = _merge_grants(rg, val)
+        limits = {}
+    rg = _role_grants_for_admin(admin_id, tenant_id) or {}
+    def _d(x): return dict(x) if isinstance(x, dict) else {}
+    val = {
+        "flags": _d(rg.get("flags")),
+        "action_grants": _d(rg.get("action_grants")),
+        "section_access": _d(rg.get("section_access")),
+        "field_grants": _d(rg.get("field_grants")),
+        "limits": limits,
+    }
     try:
         g._mg_grants_cache = {"_key": key, "val": val}
     except Exception:  # noqa: BLE001 — خارج سياق الطلب (اختبارات/CLI)

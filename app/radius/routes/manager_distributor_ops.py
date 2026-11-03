@@ -32,6 +32,12 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+# المالك 03/11: «المدير بيورث المسمّى الوظيفي فقط وما إله أي صلاحيات منفردة».
+# صفحة المدير تعرض محفظته وحدوده الرقميّة فقط؛ الأفعال والأقسام والحقول تُضبط
+# من المسمّى الوظيفي (صفحة الأدوار). التجاوزات القديمة تبقى مخزّنةً ولا تُقرأ.
+MANAGER_ROLE_ONLY = True
+
+
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
@@ -79,20 +85,22 @@ def business_operator_profile(entity_type: str, entity_id: int):
     action_catalog = []
     tri_catalog = []
     limits_catalog = []
-    if entity_type == "manager":
+    if entity_type == "manager" and not MANAGER_ROLE_ONLY:
         from ..services import manager_grants as _mg
         section_catalog = _mg.section_catalog(int(entity_id), tenant_id=_tid())
         section_states = _mg.SECTION_STATES
         field_catalog = _build_field_catalog(int(entity_id))
         action_catalog = _mg.action_catalog(int(entity_id), tenant_id=_tid())
         tri_catalog = _mg.tristate_catalog(int(entity_id), tenant_id=_tid())
+    if entity_type == "manager":
+        from ..services import manager_grants as _mg
         limits_catalog = _mg.limits_catalog(int(entity_id), tenant_id=_tid())
     presets = []
     rate_catalog = []
     if entity_type == "manager":
         from ..services import manager_presets as _p
         from ..services import manager_grants as _mg
-        presets = _p.list_presets(tenant_id=_tid())
+        presets = [] if MANAGER_ROLE_ONLY else _p.list_presets(tenant_id=_tid())
         _rd = (profile.get("limits") or {}).get("rate_daily") or {}
         rate_catalog = [
             {"key": k, "label": _mg.ACTION_REGISTRY.get(k, {}).get("label", k),
@@ -207,10 +215,15 @@ def business_operator_policy(entity_type: str, entity_id: int):
             # التجاوز الصريح فقط («حسب الدور» يحذفه) — فيَبقى الموروث حيًّا ولا
             # يغيّر حفظُ الصفحة بلا تعديل أيَّ صلاحية (D01/D02). النماذج القديمة
             # (مربّعات can_*/action_*) تُفهَم كما كانت.
-            saved = _mg.save_manager_overrides(
-                int(entity_id), request.form, tenant_id=_tid(),
-                actor_id=actor, actor_owner=actor_owner)
-            permissions = saved["flags"]
+            if MANAGER_ROLE_ONLY:
+                # لا صلاحيات منفردة: تُحفَظ الحدود والمال فقط، وتبقى أعلام
+                # المدير القديمة كما خُزّنت (لا تُقرأ — للرجوع فقط).
+                permissions = _mg.own_grants(int(entity_id), tenant_id=_tid()).get("flags") or {}
+            else:
+                saved = _mg.save_manager_overrides(
+                    int(entity_id), request.form, tenant_id=_tid(),
+                    actor_id=actor, actor_owner=actor_owner)
+                permissions = saved["flags"]
         else:
             permissions = {key: request.form.get(key) in _yes for key in _flag_keys}
         def _nonneg_int(name):
@@ -248,7 +261,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
         )
         # المستوى 1: وصول القسم (3 حالات) — للمدير فقط. حقول النموذج اسمها
         # ``section_<name>`` وقيمتها open/locked/hidden. غير المُرسَل = open.
-        if entity_type == "manager":
+        if entity_type == "manager" and not MANAGER_ROLE_ONLY:
             from ..services import manager_grants as _mg
             # sparse-ضدّ-الدور: خزّن حالة القسم الفرديّة فقط عند مخالفتها حالة
             # الدور الموروثة (وإلّا يَبقى موروثًا). الغياب = مفتوح.

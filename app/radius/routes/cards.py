@@ -3610,7 +3610,10 @@ def cards_offer_edit(offer_id: int):
 
 
 def cards_offer_visibility(offer_id: int):
-    if not is_super_admin():
+    # المالك 03/11: من يُمنح «تعديل العرض» في مسمّاه يُشارك/يُفعّل العرض أيضًا
+    from ..services import manager_grants as _mg
+    if not is_super_admin() and not _mg.action_allowed(
+            session.get("admin_id"), "offer", "edit", tenant_id=_tid()):
         return _deny_non_super()
     try:
         ids = [int(x) for x in request.form.getlist("visible_admin_ids") if str(x).strip().isdigit()]
@@ -3622,7 +3625,10 @@ def cards_offer_visibility(offer_id: int):
 
 
 def cards_offer_toggle(offer_id: int):
-    if not is_super_admin():
+    # المالك 03/11: من يُمنح «تعديل العرض» في مسمّاه يُشارك/يُفعّل العرض أيضًا
+    from ..services import manager_grants as _mg
+    if not is_super_admin() and not _mg.action_allowed(
+            session.get("admin_id"), "offer", "edit", tenant_id=_tid()):
         return _deny_non_super()
     try:
         svc = _offers_service()

@@ -112,7 +112,8 @@ def test_mapping_keys_are_known_permissions(app):
 def test_sensitive_endpoints_have_the_expected_keys(app):
     from app.radius.auth.ui_permissions import _NAV_PERM
     from app.radius.routes.blueprint import _PERM_GUARDED, _PERM_SUPER
-    assert _PERM_GUARDED["recycle_bin_purge"] == _PERM_SUPER          # D25
+    # D25 → owner 03/11: irreversible, but a key a job title can carry
+    assert _PERM_GUARDED["recycle_bin_purge"] == "cards.purge"
     assert _PERM_GUARDED["backups_prune_logs"] == _PERM_SUPER
     assert _PERM_GUARDED["setup_wizard_create_run"] == _PERM_SUPER    # v1 wizard
     assert _PERM_GUARDED["setup_wizard_v3_force_register"] == _PERM_SUPER
