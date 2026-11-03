@@ -188,11 +188,13 @@
         <div class="so-debt-tile-value">{{ owed|money }}</div>
         <div class="so-debt-tile-meta">{{ (outstanding.balance_owed_count or 0)|ar_count('subscriber') }}</div>
       </div>
+      {% if wallet_on %}
       <div class="so-debt-tile so-debt-tile--green">
         <div class="so-debt-tile-label"><i class="fa-solid fa-circle-plus"></i> {{ _('أرصدة موجبة (رصيد لهم)') }}</div>
         <div class="so-debt-tile-value">{{ credit|money }}</div>
         <div class="so-debt-tile-meta">{{ (outstanding.balance_credit_count or 0)|ar_count('subscriber') }}</div>
       </div>
+      {% endif %}
       <div class="so-debt-tile so-debt-tile--total">
         <div class="so-debt-tile-label"><i class="fa-solid fa-scale-unbalanced"></i> {{ _('إجمالي المتبقّي') }}</div>
         <div class="so-debt-tile-value">{{ total_out|money }}</div>

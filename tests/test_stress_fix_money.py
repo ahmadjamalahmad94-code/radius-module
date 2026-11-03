@@ -739,3 +739,13 @@ def test_negative_amounts_are_refused(client):
                      json=dict(base, name="neg2", validity_days=-3)), 422)
     _err(client.post("/api/v1/profiles", headers=AUTH,
                      json=dict(base, name="neg3", duration_minutes=-60)), 422)
+
+
+@pytest.fixture(autouse=True)
+def _wallet_on(app):
+    """هذه الاختبارات تفحص المحفظة («مدفوع» = خصم من رصيد المشترك)، وهي
+    معطّلة افتراضيًّا منذ قرار المالك 2026-11-03 — تُفعَّل هنا صراحةً."""
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.ensure_default_tenant()
+        tenants_repo.set_setting(1, "subscribers.wallet_enabled", "1")

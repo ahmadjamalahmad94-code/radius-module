@@ -43,6 +43,11 @@ _DEFAULTS = {
     # الاختيار الصريح يغلب دائمًا: «بدون انتهاء» / ‎expire_at: null ⇒ NULL،
     # وتاريخٌ صريح ⇒ هو.
     "subscribers.create_without_expiry": "expired",
+    # قرار المالك 2026-11-03: «محفظة المشترك» (رصيدٌ مسبق، إضافة رصيد، الخصم من
+    # الرصيد) ميزةٌ تُفعَّل من الإعدادات — **معطّلة افتراضيًّا** لأنّ أغلب
+    # المشغّلين ظنّوها خللًا. معطّلة ⇒ الدفع الفوريّ: كاش / دين (ومجّانيّ) فقط،
+    # وكلّ ما يخصّ الرصيد مخفيّ. «1» = مفعّلة.
+    "subscribers.wallet_enabled": "0",
     "system.name": "HobeRadius",
     "radius.default_country": "",
     "branding.logo_url": "",
@@ -82,6 +87,27 @@ CREATE_WITHOUT_EXPIRY_CHOICES = [
     ("unlimited", N_("بلا انتهاء")),
 ]
 CREATE_WITHOUT_EXPIRY_LABEL = N_("المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء")
+
+
+WALLET_CHOICES = [
+    ("0", N_("معطّلة — دفع فوري: كاش / دين")),
+    ("1", N_("مفعّلة — رصيد مسبق وخصم من الرصيد")),
+]
+
+
+def wallet_enabled(tenant_id: int | None = None) -> bool:
+    """«محفظة المشترك» مفعّلة على هذه الواجهة؟ الافتراضيّ لا؛ قيمةٌ تالفة ⇒ لا.
+
+    تُخفي الواجهةَ وتحدّد معنى «مدفوع» الواصل من التطبيق فقط — منطق الرصيد في
+    الخدمات يبقى كما هو (أرصدةٌ قائمة، تجديدٌ تلقائيّ «من الرصيد» مضبوط سلفًا)."""
+    key = "subscribers.wallet_enabled"
+    try:
+        from ..db.repos import tenants_repo
+        tid = int(tenant_id) if tenant_id is not None else _tid()
+        val = str(tenants_repo.get_setting(tid, key, _DEFAULTS[key]) or "").strip()
+    except Exception:  # noqa: BLE001 — قراءة إعداد لا تكسر صفحة ولا عمليّة
+        val = _DEFAULTS[key]
+    return val == "1"
 
 
 def create_without_expiry_mode(tenant_id: int | None = None) -> str:
@@ -157,6 +183,8 @@ def system_config() -> dict[str, Any]:
         "country": _get("radius.default_country"),
         "logo_url": _get("branding.logo_url"),
         "primary_color": _get("branding.primary_color") or "#2BAACC",
+        # «محفظة المشترك» — القوالب تُخفي كلّ ما يخصّ الرصيد حين تكون معطّلة.
+        "wallet_enabled": _get("subscribers.wallet_enabled") == "1",
     }
 
 
@@ -215,6 +243,8 @@ def effective_system_settings() -> dict[str, Any]:
         "tz_offset": tz["utc_offset_minutes"] / 60.0,
         # «expired» | «unlimited» — ما يعنيه إنشاء مشتركٍ بلا expire_at.
         "create_without_expiry": create_without_expiry_mode(),
+        # «محفظة المشترك»: معطّلة ⇒ التطبيق يعرض كاش / دين (ومجّانيّ) فقط.
+        "wallet_enabled": wallet_enabled(),
         # F03 N7: القاعدة الواحدة لتحويل وقتٍ محلّيّ مكتوب إلى UTC (الويب يطبّقها
         # في from_local؛ التطبيق يطبّقها بجدول التحوّلات أدناه — لا بإزاحة الآن).
         "local_time_rule": dict(LOCAL_TIME_RULE),

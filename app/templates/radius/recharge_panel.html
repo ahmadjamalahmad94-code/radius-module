@@ -258,7 +258,7 @@
         <div class="rcp-fact-s" id="sp-exp-rel"></div>
       </div>
       <div class="rcp-fact">
-        <div class="rcp-fact-l"><i class="fa-solid fa-scale-balanced"></i> {{ _('الرصيد') }}</div>
+        <div class="rcp-fact-l"><i class="fa-solid fa-scale-balanced"></i> {{ _('الرصيد') if wallet_on else _('الدين') }}</div>
         <div class="rcp-fact-v" id="sp-bal">—</div>
         <div class="rcp-fact-s" id="sp-loans"></div>
       </div>
@@ -607,7 +607,9 @@
     $("#sp-exp").textContent = rel[0];
     $("#sp-exp-rel").textContent = rel[1];
     var bal = $("#sp-bal");
-    bal.textContent = s.balance_label;
+    // المحفظة معطّلة: يُعرض الدين فقط (الرصيد السالب بلا إشارة)، والموجب «لا دين».
+    bal.textContent = {{ 'true' if wallet_on else 'false' }} ? s.balance_label
+      : (s.balance < 0 ? String(s.balance_label).replace("-", "") : {{ _("لا دين")|tojson }});
     bal.classList.toggle("neg", s.balance < 0);
     bal.classList.toggle("pos", s.balance > 0);
     $("#sp-loans").textContent = s.open_loans > 0 ? ({{ _("سلف مفتوحة:")|tojson }} + " " + s.open_loans_label) : {{ _("لا سلف مفتوحة")|tojson }};

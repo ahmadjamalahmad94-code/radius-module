@@ -106,6 +106,12 @@ def settings_patch():
                 return fail("validation_error",
                             _tr("القيمة يجب أن تكون expired (منتهٍ فورًا) أو unlimited (بلا انتهاء)."),
                             status=422, details={"field": skey})
+        if skey == "subscribers.wallet_enabled":
+            if sval not in ("", "0", "1"):
+                return fail("validation_error",
+                            _tr("القيمة يجب أن تكون 0 (المحفظة معطّلة) أو 1 (مفعّلة)."),
+                            status=422, details={"field": skey})
+            sval = sval or "0"
         if skey.startswith("limits."):
             # «الحدود» — نفس تحقّق صفحة الإعدادات (core.limits.validate_setting).
             from ...radius.core import limits as _limits

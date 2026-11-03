@@ -33,11 +33,43 @@ def _currency(value) -> str:
     return normalize_currency(value)
 
 
+# طرق الدفع في نوافذ التمديد/الكوتة/الاستعادة (قرار المالك 2026-11-03):
+#   free  مجّانيّ — بلا مبلغ.
+#   cash  كاش — المبلغ قُبض الآن؛ لا يمسّ رصيد المشترك ولا يحتاجه.
+#   paid  محفظة — يُخصم من رصيد المشترك المسبق (حين تُفعَّل المحفظة).
+#   debt  دين — يُسجَّل على المشترك (رصيده ينزل تحت الصفر).
+CHARGE_MODES = ("free", "cash", "paid", "debt")
+CHARGED_MODES = frozenset({"cash", "paid", "debt"})
+
+
+def normalize_charge_mode(raw, tenant_id: int | None = None) -> str:
+    """طريقة الدفع الواصلة من نموذج ويب أو التطبيق.
+
+    «paid» كان يعني في النوافذ القديمة «مدفوع — نقدًا» (ويُخصم من الرصيد). حين
+    تكون المحفظة معطّلة لا رصيد يُخصم منه — فنسخة تطبيقٍ قديمة أو صفحةٌ مخزّنة
+    ترسل «paid» ويقصد صاحبها «قبضتُ المبلغ» ⇒ «cash». الخدمات نفسها تبقى صارمة:
+    التجديد التلقائيّ «من الرصيد» يمرّ «paid» مباشرةً ولا يمرّ من هنا."""
+    mode = str(raw or "free").strip().lower()
+    if mode == "paid":
+        from ..core.system_config import wallet_enabled
+        if not wallet_enabled(tenant_id):
+            return "cash"
+    return mode
+
+
+_CHARGE_LABELS = {"free": N_("مجانية"), "cash": N_("كاش"),
+                  "paid": N_("من المحفظة"), "debt": N_("على الدين")}
+
+
+def charge_mode_label(mode: str) -> str:
+    return _tr(_CHARGE_LABELS[mode]) if mode in _CHARGE_LABELS else str(mode or "")
+
+
 def _charge_amount(charge_mode: str, amount) -> float:
     """مبلغ «مدفوع/دين» مُقرَّبًا لقرشين **قبل** الفحص — 0.004 كان يمرّ «> 0»
     ثم يُسجَّل قيد دين 0.00 ويمنح ساعة مجّانًا — وبسقف العمليّة الواحدة
     (كان «أضف وقت» في الويب يقبل دينًا بقيمة 1e11). المجّانيّ يمرّ كما هو."""
-    if charge_mode not in {"paid", "debt"}:
+    if charge_mode not in CHARGED_MODES:
         return amount
     value = round_money(finite_float(amount, field="amount"))
     if value <= 0:
@@ -656,7 +688,7 @@ class UsersService:
         existing callers keep the original no-cost behaviour.
         """
         currency = _currency(currency)
-        if charge_mode not in {"free", "paid", "debt"}:
+        if charge_mode not in CHARGE_MODES:
             raise RadiusValidationError(_tr("طريقة الاستعادة غير معروفة."))
         amount = _charge_amount(charge_mode, amount)
 
@@ -665,7 +697,12 @@ class UsersService:
         # المبلغ (رصيد −5) على عرضٍ بلا أيّ سقف يوميّ. يُرفض في كلّ الأنماط.
         if not daily_reset_applicable(sub):
             raise NothingToReset(NOTHING_TO_RESET_AR)
-        _require_paid_balance(sub, amount, charge_mode)
+        paid_via = charge_mode
+        if charge_mode == "cash":
+            sub = self._receive_cash(actor=actor, sub=sub, amount=amount, currency=currency,
+                                     source_type="subscriber_daily_quota_reset", notes=notes)
+            charge_mode = "paid"
+        _require_paid_balance(sub, amount, paid_via)   # كاش في اليد ⇒ لا فحص رصيد
         changes = {
             "used_seconds": 0,
             "used_bytes_in": 0,
@@ -696,7 +733,7 @@ class UsersService:
                 source_type="subscriber_daily_quota_reset",
                 notes=notes or (N_("استعادة كوتة يومية مدفوعة") if charge_mode == "paid"
                                 else N_("استعادة كوتة يومية على الدين")),
-                metadata={"charge_mode": charge_mode},
+                metadata={"charge_mode": paid_via},
             )
         self._audit.record(
             actor=actor,
@@ -707,14 +744,15 @@ class UsersService:
                 "previous_used_seconds": sub.used_seconds,
                 "previous_used_bytes_in": sub.used_bytes_in,
                 "previous_used_bytes_out": sub.used_bytes_out,
-                "charge_mode": charge_mode,
+                "charge_mode": paid_via,
                 "amount": float(amount) if charge_mode in {"paid", "debt"} else 0,
             },
         )
         # تنبيه إدارة — استعادة/تصفير كوتا (تصفير العدّادات اليومية).
         _detail = N_("تصفير الاستهلاك اليومي")
         if charge_mode in {"paid", "debt"}:
-            _detail += (N_(" — مدفوعة ") if charge_mode == "paid" else N_(" — على الدين ")) \
+            _detail += (N_(" — كاش ") if paid_via == "cash" else
+                        N_(" — مدفوعة ") if charge_mode == "paid" else N_(" — على الدين ")) \
                 + _fmt_money_ar(amount, currency)
         _notify_alert(saved.tenant_id, "quota_restored", {
             "username": username,
@@ -736,7 +774,7 @@ class UsersService:
             raise RadiusValidationError(_tr("حجم الكوتة يجب أن يكون أكبر من صفر."))
         if quota_target not in {"combined", "download", "upload"}:
             raise RadiusValidationError(_tr("نوع الكوتة غير معروف."))
-        if charge_mode not in {"free", "paid", "debt"}:
+        if charge_mode not in CHARGE_MODES:
             raise RadiusValidationError(_tr("طريقة الإضافة غير معروفة."))
         amount = _charge_amount(charge_mode, amount)
         quota_window = (quota_window or "auto").strip().lower()
@@ -806,7 +844,13 @@ class UsersService:
                     "«الكوتة الإجماليّة» لا إلى اتجاهٍ واحد."))
             base_total = sub_combined if sub_combined > 0 else plan_total
             changes["combined_quota_mb"] = base_total + quota_mb
-        _require_paid_balance(sub, amount, charge_mode)
+        paid_via = charge_mode
+        if charge_mode == "cash":
+            sub = self._receive_cash(actor=actor, sub=sub, amount=amount, currency=currency,
+                                     source_type="subscriber_quota_topup", notes=notes)
+            charge_mode = "paid"
+            changes["balance"] = float(sub.balance or 0)
+        _require_paid_balance(sub, amount, paid_via)   # كاش في اليد ⇒ لا فحص رصيد
         if charge_mode in {"paid", "debt"}:
             # See reset_daily_quota: paid consumes the prepaid balance, debt goes
             # on credit. Both debit the wallet by `amount`; paid must never leave
@@ -834,7 +878,7 @@ class UsersService:
                     "quota_mb": quota_mb,
                     "quota_target": quota_target,
                     "quota_window": quota_window,
-                    "charge_mode": charge_mode,
+                    "charge_mode": paid_via,
                 },
             )
         self._audit.record(
@@ -846,7 +890,7 @@ class UsersService:
                 "quota_mb": quota_mb,
                 "quota_target": quota_target,
                 "quota_window": quota_window,
-                "charge_mode": charge_mode,
+                "charge_mode": paid_via,
                 "amount": amount,
                 "currency": currency,
             },
@@ -868,6 +912,32 @@ class UsersService:
             "new_total": _tr('%(v)s م.ب', v=int(_new_total or 0)),
             "actor": actor,
         }, dedup_key=f"quota:{username}:{quota_mb}:{quota_target}")
+        return saved
+
+    def _receive_cash(self, *, actor: str, sub: Subscriber, amount: float,
+                      currency: str, source_type: str, notes: str) -> Subscriber:
+        """«كاش»: المبلغ قُبض الآن مقابل هذه العمليّة.
+
+        يُقيَّد إيداعًا نقديًّا («cash_balance» دائن) ثمّ يستهلكه مسارُ «مدفوع»
+        نفسه بقيدٍ مدين — أي ما كان المشغّل يفعله يدويًّا «أضف رصيدًا ثمّ ادفع»
+        في خطوةٍ واحدة. صافي الرصيد لا يتحرّك (ودينٌ قائم لا يُسدَّد ضمنًا)،
+        والتقارير الماليّة تقرأ القيدين كما كانت. يُستدعى داخل معاملة العمليّة
+        (@atomic): رفضٌ بعده يُرجع الإيداع أيضًا."""
+        previous = float(sub.balance or 0)
+        saved = self._adapter.upsert_account(replace(sub, balance=previous + float(amount)))
+        _record_subscriber_ledger(
+            actor=actor,
+            subscriber=saved,
+            entry_type="cash_balance",
+            direction="credit",
+            amount=float(amount),
+            currency=currency,
+            source_type="subscriber_cash_payment",
+            notes=notes or N_("دفع فوري — كاش"),
+            metadata={"method": "cash", "for": source_type,
+                      "previous_balance": previous,
+                      "new_balance": float(saved.balance or 0)},
+        )
         return saved
 
     @atomic
@@ -1031,14 +1101,19 @@ class UsersService:
         # قرار المالك: أقصى تمديد في العمليّة الواحدة سنة (التكرار مسموح).
         check_extend_minutes(minutes)
         currency = _currency(currency)
-        if charge_mode not in {"free", "paid", "debt"}:
+        if charge_mode not in CHARGE_MODES:
             raise RadiusValidationError(_tr("طريقة الإضافة غير معروفة."))
         amount = _charge_amount(charge_mode, amount)
         u = self._adapter.get_account(username)
         _reject_extend_unlimited(u)
         from .plan_lifecycle import reject_single_use
         reject_single_use(u)
-        _require_paid_balance(u, amount, charge_mode)
+        paid_via = charge_mode
+        if charge_mode == "cash":
+            u = self._receive_cash(actor=actor, sub=u, amount=amount, currency=currency,
+                                   source_type="subscriber_time_extension", notes=notes)
+            charge_mode = "paid"
+        _require_paid_balance(u, amount, paid_via)   # كاش في اليد ⇒ لا فحص رصيد
         # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
         #
         # كان `(u.expire_at or now) + delta`. فمشتركٌ **انتهى** أمس تُضاف إليه
@@ -1068,6 +1143,7 @@ class UsersService:
             duration_label=_fmt_minutes_ar(minutes),
             ledger_note=(N_("إضافة وقت مدفوعة") if charge_mode == "paid"
                          else N_("إضافة وقت على الدين")),
+            paid_via=paid_via,
         )
 
     @atomic
@@ -1091,18 +1167,23 @@ class UsersService:
         if not isinstance(expire_at, datetime):
             raise RadiusValidationError(_tr("تاريخ الانتهاء مطلوب."))
         check_expiry(expire_at)
-        if charge_mode not in {"free", "paid", "debt"}:
+        if charge_mode not in CHARGE_MODES:
             raise RadiusValidationError(_tr("طريقة الإضافة غير معروفة."))
         amount = _charge_amount(charge_mode, amount)
         currency = _currency(currency)
         u = self._adapter.get_account(username)
         from .plan_lifecycle import reject_single_use
         reject_single_use(u)
-        _require_paid_balance(u, amount, charge_mode)
         # Owner rule (2026-09-29): one set-expiry moves the end ≤ 1 year past
         # max(now, current end); never beyond 2100.
         from .subscriber_validation import validate_expiry_jump
         validate_expiry_jump(u.expire_at, expire_at)
+        paid_via = charge_mode
+        if charge_mode == "cash":
+            u = self._receive_cash(actor=actor, sub=u, amount=amount, currency=currency,
+                                   source_type="subscriber_time_extension", notes=notes)
+            charge_mode = "paid"
+        _require_paid_balance(u, amount, paid_via)   # كاش في اليد ⇒ لا فحص رصيد
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
         minutes = int(round((expire_at - _anchor).total_seconds() / 60))
@@ -1112,12 +1193,14 @@ class UsersService:
             action="set_expiry", minutes=minutes,
             duration_label=_tr('حتّى %(v)s', v=_fmt_dt_local(expire_at)),
             ledger_note=N_("تعيين تاريخ الانتهاء"),
+            paid_via=paid_via,
         )
 
     def _commit_expiry(self, *, actor: str, u: Subscriber, new_exp: datetime,
                        charge_mode: str, amount: float, currency: str,
                        notes: str, action: str, minutes: int,
-                       duration_label: str, ledger_note: str) -> Subscriber:
+                       duration_label: str, ledger_note: str,
+                       paid_via: str = "") -> Subscriber:
         """الكتابةُ والدفترُ والتدقيقُ والتنبيه — مشتركةٌ بين التمديد والتعيين.
 
         المسلكان يختلفان في **حساب** النهاية فقط؛ وما بعدها واحد. فصلُه هنا
@@ -1146,7 +1229,7 @@ class UsersService:
                 currency=currency,
                 source_type="subscriber_time_extension",
                 notes=notes or ledger_note,
-                metadata={"minutes": minutes, "charge_mode": charge_mode},
+                metadata={"minutes": minutes, "charge_mode": paid_via or charge_mode},
             )
         # before/after لعرض «تاريخ الانتهاء: كان X ← صار Y» في صفحة تغييرات
         # الباقات. المفتاح «expiry» (لا expire_at) كي لا يُسقطه فلتر «*_at» في
@@ -1156,7 +1239,7 @@ class UsersService:
         self._audit.record(actor=actor, action=action,
                            target_type="user", target_id=username,
                            payload={"minutes": minutes, "new_expire_at": new_exp.isoformat(),
-                                    "charge_mode": charge_mode,
+                                    "charge_mode": paid_via or charge_mode,
                                     "amount": float(amount) if charge_mode in {"paid", "debt"} else 0},
                            before={"expiry": _old_exp},
                            after={"expiry": _new_exp})
@@ -1164,6 +1247,8 @@ class UsersService:
         # يُطلق «سلفة وقت» (F07): ليس سلفة (لا قيد سلفة ولا تسوية لها) بل تمديدٌ
         # بدينٍ على الرصيد — النوع والمبلغ في «النوع».
         _kind = {"paid": N_("مدفوع"), "debt": N_("على الدين")}.get(charge_mode, N_("مجاني"))
+        if paid_via == "cash":
+            _kind = N_("كاش")
         if charge_mode in {"paid", "debt"}:
             _kind += " — " + _fmt_money_ar(amount, currency)
         _notify_alert(saved.tenant_id, "time_added", {
@@ -1174,7 +1259,8 @@ class UsersService:
             "actor": actor,
         }, dedup_key=f"time_added:{username}:{minutes}")
         # إشعار المشترك بخصم رصيده مقابل الوقت («سحب رصيد» — مُطفأ افتراضيًّا).
-        if charge_mode in {"paid", "debt"} and amount > 0:
+        # «كاش» لم يمسّ الرصيد ⇒ لا «سحب رصيد».
+        if charge_mode in {"paid", "debt"} and amount > 0 and paid_via != "cash":
             try:
                 from .notifications_engine import notify_event, find_subscriber
                 notify_event(

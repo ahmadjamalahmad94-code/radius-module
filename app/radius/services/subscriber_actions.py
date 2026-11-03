@@ -91,7 +91,8 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
                       currency: str = "", notes: str = ""):
     """«إضافة وقت» — add a duration, or (``expire_at`` given, naive UTC) set the
     exact expiry. Paid/debt renewals pass the manager spend gate first."""
-    from .users import _reject_extend_unlimited, _require_paid_balance, get_users_service
+    from .users import (CHARGED_MODES, _reject_extend_unlimited, _require_paid_balance,
+                        get_users_service)
 
     # R6: مشتركٌ بلا انتهاء لا يُضاف إليه وقت — يُرفض **قبل** بوّابة إنفاق المدير
     # (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض). تعيينُ التاريخ مسموح.
@@ -109,7 +110,7 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
         _require_paid_balance(get_users_service().get(username), amount, charge_mode)
     # Manager spend gate for paid/debt renewals (تجديد). Free extends cost
     # the manager nothing → not gated.
-    if charge_mode in ("paid", "debt"):
+    if charge_mode in CHARGED_MODES:
         blocked = manager_spend_block(caller, amount, kind="renew",
                                       reference_type="subscriber_renew",
                                       notes=_tr('تجديد المشترك %(username)s', username=username))

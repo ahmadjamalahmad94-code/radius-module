@@ -516,6 +516,21 @@
           <div class="help">{{ _('منتهٍ فورًا: يولد المشترك منتهيًا حتى يُدفع له أو يُمدَّد. بلا انتهاء: لا ينتهي أبدًا (للخدمة المجّانيّة).') }}</div>
           <bdi class="st-key">subscribers.create_without_expiry</bdi>
         </div>
+        {# قرار المالك 2026-11-03: «محفظة المشترك» — معطّلة افتراضيًّا؛ تُفعَّل لمن يستخدم الرصيد المسبق. #}
+        {% set w_choices = wallet_choices if wallet_choices is defined else [('0',_('معطّلة — دفع فوري: كاش / دين')),('1',_('مفعّلة — رصيد مسبق وخصم من الرصيد'))] %}
+        {% set cur_w = vals.get('subscribers.wallet_enabled','0') or '0' %}
+        <div class="st-field">
+          <label class="st-field-label">{{ _('محفظة المشترك') }}
+            <span class="hub-hint" tabindex="0" data-hint="{{ _('معطّلة (الافتراضي): عند التمديد أو الكوتة تكتب المبلغ وتختار كاش أو دين أو مجاني، ولا يظهر أيّ شيء عن الرصيد. مفعّلة: يظهر رصيد المشترك وإضافة الرصيد، ويُضاف خيار «محفظة» الذي يخصم من الرصيد المسبق.') }}"><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="subscribers.wallet_enabled">
+            {% for v, l in w_choices %}
+              <option value="{{ v }}" {{ 'selected' if cur_w == v else '' }}>{{ l }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('الأرصدة الموجودة لا تُحذف عند التعطيل — تبقى محفوظة وتعود للظهور عند التفعيل.') }}</div>
+          <bdi class="st-key">subscribers.wallet_enabled</bdi>
+        </div>
         {# «نسبة الضريبة» (billing.tax_pct) أُزيلت — قرار المالك 2026-10-06: لا شيء يحسب ضريبة. #}
       </div>
     </div>
