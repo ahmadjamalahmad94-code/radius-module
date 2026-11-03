@@ -566,7 +566,7 @@ _PERM_GUARDED: dict[str, str] = {
     # لوحة شحن الرصيد (المالك فقط) — رؤية وشحن أرصدة/ديون/سلف المدراء
     # والموزّعين. ليست في _PERM_WRITE_ONLY فيسري الحارس على GET + POST معًا
     # (المالك الرئيسي وحده، 403 لغيره — لا مجرّد إخفاء واجهة).
-    "credit_dashboard": _PERM_SUPER, "credit_recharge": _PERM_SUPER,
+    "credit_dashboard": "admins.deposit_balance", "credit_recharge": "admins.deposit_balance",
     # «تصفير / تنظيف البيانات» — أداة مدمّرة للمالك فقط (المالك الرئيسي/مجموعة
     # المالكين). __super__ يَحرس كل الـmethods (GET الصفحة + POST الملخّص +
     # POST التنفيذ) → 403 لأيّ غير مالك، لا مجرّد إخفاء واجهة. النسخة الاحتياطيّة
@@ -1017,7 +1017,7 @@ _PERM_GUARDED: dict[str, str] = {
     # يُفشل البناء عند أيّ مسار جديد بلا حارس. الحسّاس مالك فقط.
     # ═══════════════════════════════════════════════════════════════════
     # حذف نهائيّ بلا رجعة (سلّة المحذوفات) — للمالك/المالك المشارك وحده (D25).
-    "recycle_bin_purge": _PERM_SUPER,
+    "recycle_bin_purge": "cards.purge",
     # صيانة قاعدة البيانات (حذف سجلّات قديمة) — مالك فقط مثل بقيّة backups_*.
     "backups_prune_logs": _PERM_SUPER, "backups_gdrive_poll": _PERM_SUPER,
     # الترحيل وتحديث النظام وفرض مفاتيح الـAPI — المعالِج يَفحص المالك أصلًا؛

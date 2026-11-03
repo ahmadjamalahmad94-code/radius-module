@@ -82,6 +82,20 @@ def _admin(role_id=None, *, name=None):
                                     full_name="M", is_super_admin=False, role_id=role_id)
 
 
+def _role_granular(mgr, extra):
+    """Owner 03/11: a manager has no individual permissions — what used to be
+    set on the manager (section lock, field lock) is set on his job title."""
+    from app.radius.db.repos import admins_repo
+    from app.radius.services import manager_grants as mg
+    blob = dict(admins_repo.get_role_granular(mgr.role_id) or {})
+    for k, v in extra.items():
+        cur = dict(blob.get(k) or {})
+        cur.update(v)
+        blob[k] = cur
+    admins_repo.set_role_granular(mgr.role_id, blob)
+    mg._invalidate_cache()
+
+
 def _sub(username=None, *, manager_id=None, **kw):
     from app.radius.core.types import Subscriber
     from app.radius.db.repos import subscribers_repo
@@ -314,16 +328,18 @@ def test_d02_opening_profile_does_not_freeze_role_view_all(app):
     assert _fresh(_effective)(app, mgr.id)["f:can_view_all_subscribers"] is True
 
 
-def test_d02_override_beats_role_beats_default(app):
+def test_d02_the_job_title_decides_not_an_individual_override(app):
     with app.app_context():
         role = _role(["users.view", "scope.view_all_subscribers"])
         mgr = _admin(role.id)
         from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
         svc = ManagerDistributorOpsService(tenant_id=1)
+        # owner 03/11: an individual «ممنوع» on the manager no longer counts —
+        # only the job title decides
         svc.set_policy(entity_type="manager", entity_id=mgr.id,
                        permissions={"can_view_all_subscribers": False})
         assert svc.has_permission(entity_type="manager", entity_id=mgr.id,
-                                  permission="can_view_all_subscribers") is False
+                                  permission="can_view_all_subscribers") is True
         svc.set_policy(entity_type="manager", entity_id=mgr.id, permissions={})
         assert svc.has_permission(entity_type="manager", entity_id=mgr.id,
                                   permission="can_view_all_subscribers") is True
@@ -375,7 +391,7 @@ def test_e2e_locked_section_hides_button_and_refuses_before_opening(app):
     with app.app_context():
         mgr = _admin(_role(["users.view", "users.create", "users.edit"]).id)
         from app.radius.services import manager_grants as mg
-        mg.set_section_access(mgr.id, {"subscribers": "locked"}, tenant_id=1)
+        _role_granular(mgr, {"section_access": {"subscribers": "locked"}})
     with app.test_client() as c:
         _login(c, mgr.id)
         r = c.get("/admin/radius/users/new")                       # refused BEFORE it opens
@@ -394,7 +410,7 @@ def test_d04_refused_post_rerenders_form_with_typed_data(app):
     with app.app_context():
         mgr = _admin(_role(["users.view", "users.create"]).id)
         from app.radius.services import manager_grants as mg
-        mg.set_section_access(mgr.id, {"subscribers": "locked"}, tenant_id=1)
+        _role_granular(mgr, {"section_access": {"subscribers": "locked"}})
     with app.test_client() as c:
         _login(c, mgr.id)
         r = c.post("/admin/radius/users", data=_new_sub_form("kept_" + uuid4().hex[:5],
@@ -506,7 +522,8 @@ def test_e2e_co_owner_manages_everything_but_cannot_demote_original_owner(app):
     with app.test_client() as c:
         _login(c, owner)
         page = c.get(f"/admin/radius/admins/{co.id}/edit").get_data(as_text=True)
-        assert "منح صلاحيات المالك (شريك)" in page and "سوبر يوزر" in page
+        # «سوبر يوزر» is now just the «مدير عام» job title in the role list
+        assert "منح صلاحيات المالك (شريك)" in page and "سوبر يوزر" not in page
         r = c.post(f"/admin/radius/admins/{co.id}", data={
             "full_name": "Co", "role_id": str(co.role_id), "enabled": "1",
             "access_level_present": "1", "is_co_owner": "1"})
@@ -630,7 +647,7 @@ def test_d19_field_grants_apply_on_create_web_and_api(app):
     with app.app_context():
         mgr = _admin(_role(["users.view", "users.create"]).id)
         from app.radius.services import manager_grants as mg
-        mg.set_field_grants(mgr.id, "subscriber", ["name"], tenant_id=1)
+        _role_granular(mgr, {"field_grants": {"subscriber": ["name"]}})
         owner = _owner_id()
     web_name = "w_" + uuid4().hex[:6]
     with app.test_client() as c:
@@ -662,7 +679,7 @@ def test_d20_locked_fields_render_readonly_with_hint_and_warn_on_save(app):
         mgr = _admin(_role(["users.view", "users.edit"]).id)
         mine = _sub(manager_id=mgr.id)
         from app.radius.services import manager_grants as mg
-        mg.set_field_grants(mgr.id, "subscriber", ["name"], tenant_id=1)
+        _role_granular(mgr, {"field_grants": {"subscriber": ["name"]}})
     with app.test_client() as c:
         _login(c, mgr.id)
         html = c.get(f"/admin/radius/users/{mine.username}/edit").get_data(as_text=True)
@@ -675,11 +692,11 @@ def test_d21_rename_is_grantable_under_field_control(app):
         mgr = _admin(_role(["users.view", "users.edit"]).id)
         from app.radius.services import manager_grants as mg
         assert "username" in mg.field_keys("subscriber")
-        mg.set_field_grants(mgr.id, "subscriber", ["name"], tenant_id=1)
+        _role_granular(mgr, {"field_grants": {"subscriber": ["name"]}})
     def check(granted):
         from app.radius.services import manager_grants as mg
         from app.radius.services import subscriber_actions as sa
-        mg.set_field_grants(mgr.id, "subscriber", granted, tenant_id=1)
+        _role_granular(mgr, {"field_grants": {"subscriber": granted}})
         caller = sa.ActionCaller(tenant_id=1, admin_id=mgr.id, is_super=False, actor="t")
         return sa.username_rename_locked(caller)
     assert _fresh(check)(app, ["name"]) is True
@@ -720,7 +737,7 @@ def test_d24_forbidden_names_the_real_reason(app):
         mgr = _admin(_role(["users.view", "users.extend"]).id)
         mine = _sub(manager_id=mgr.id)
         from app.radius.services import manager_grants as mg
-        mg.set_section_access(mgr.id, {"subscribers": "locked"}, tenant_id=1)
+        _role_granular(mgr, {"section_access": {"subscribers": "locked"}})
     with app.test_client() as c:
         _login(c, mgr.id)
         r = c.post(f"/admin/radius/users/{mine.username}/extend",

@@ -186,10 +186,11 @@ def _parent_with_child(parent_perms=("users.view", "users.delete", "store.review
                                      "store.view")):
     from app.radius.db.repos import admins_repo
     role = _role(parent_perms)
+    # owner 03/11: grants live on the job title — «إنشاء مدراء فرعيّين» and
+    # «إدارة الموزعين» are flags of the role, not of the manager
+    admins_repo.set_role_granular(role.id, {"flags": {"can_create_sub_managers": True,
+                                                      "can_manage_distributors": True}})
     parent = _admin(role_id=role.id)
-    _svc().update_policy(entity_type="manager", entity_id=parent.id,
-                         permissions={"can_create_sub_managers": True,
-                                      "can_manage_distributors": True})
     child = _admin(role_id=role.id)
     _db().execute("UPDATE admins SET parent_admin_id=? WHERE id=?", (parent.id, child.id))
     return admins_repo.get_admin(parent.id), admins_repo.get_admin(child.id)
@@ -223,8 +224,14 @@ def test_delegate_keeps_existing_limits_credit_and_other_flags(app):
     assert after["credit_minor"] == before["credit_minor"] == 10000
     assert after["profit"] == 12.5
     assert after["approval_minor"] == before["approval_minor"] == 4000
-    assert after["perms"]["can_view_all_subscribers"] is True
-    assert after["perms"]["can_manage_distributors"] is True   # what was delegated
+    # owner 03/11: delegation no longer writes individual permissions; the
+    # child's flags are his job title's, whatever was stored before
+    from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
+    has = ManagerDistributorOpsService(tenant_id=1).has_permission
+    assert has(entity_type="manager", entity_id=child.id,
+               permission="can_manage_distributors") is True      # the role's flag
+    assert has(entity_type="manager", entity_id=child.id,
+               permission="can_view_all_subscribers") is False    # stored, not read
 
 
 def test_delegate_changes_only_the_limits_sent_and_clamps_them(app):
@@ -259,31 +266,25 @@ def test_delegate_cannot_escalate_flags(app):
                                          "flag_can_see_wholesale": "1",
                                          "flag_can_see_password": "1"})
     with app.app_context():
-        perms = _raw_policy(child.id)["perms"]
         assert mg.can_see(child.id, "can_see_wholesale", tenant_id=1) is False
-    assert perms["can_manage_distributors"] is True
-    assert perms["can_see_wholesale"] is False and perms["can_see_password"] is False
+        assert mg.can_see(child.id, "can_see_password", tenant_id=1) is False
 
 
 def test_child_never_exceeds_parent_on_role_derived_actions(app):
-    """The child inherits the parent's role, so the role-derived actions
-    (delete, store approvals…) are capped at run time: what the owner switched
-    off for the parent is off for the child too."""
+    """The child carries the parent's job title, so it can do exactly what the
+    parent's title allows — owner 03/11: no individual switches on either."""
     from app.radius.services import manager_grants as mg
     with app.app_context():
-        parent, child = _parent_with_child()
-        assert mg.action_permitted(child.id, "subscriber.delete", tenant_id=1) is True
-        mg.set_action_override(parent.id, "subscriber.delete", False, tenant_id=1)
-        mg.set_action_override(parent.id, "store.withdraw_approve", False, tenant_id=1)
+        parent, child = _parent_with_child(parent_perms=("users.view", "store.review",
+                                                         "store.view"))
+        assert child.role_id == parent.role_id
+        for key in ("subscriber.delete", "store.deposit_approve"):
+            assert (mg.action_permitted(child.id, key, tenant_id=1)
+                    == mg.action_permitted(parent.id, key, tenant_id=1)), key
+        assert mg.action_permitted(child.id, "subscriber.delete", tenant_id=1) is False
+    _delegate(app, parent.id, child.id, {"action_subscriber.delete": "1"})
     with app.app_context():
         assert mg.action_permitted(child.id, "subscriber.delete", tenant_id=1) is False
-        assert mg.action_permitted(child.id, "store.withdraw_approve", tenant_id=1) is False
-        assert mg.action_permitted(child.id, "store.deposit_approve", tenant_id=1) is True
-    # the parent can switch a derived action off for the child explicitly
-    _delegate(app, parent.id, child.id, {"action_store.deposit_approve": "0"})
-    with app.app_context():
-        assert mg.action_permitted(child.id, "store.deposit_approve", tenant_id=1) is False
-        assert mg.action_permitted(parent.id, "store.deposit_approve", tenant_id=1) is True
 
 
 def test_new_sub_manager_starts_within_the_parents_caps(app):

@@ -32,7 +32,7 @@
   items=[
     {"icon": "user", "text": _('اسم المستخدم يُثبَّت عند الإنشاء ولا يمكن تعديله لاحقًا.')},
     {"icon": "key", "text": _('كلمة المرور تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ.')},
-    {"icon": "id-badge", "text": _('الدور يحدّد الصلاحيات الفعلية — اختر دورًا مناسبًا أو اتركه بدون دور.')},
+    {"icon": "id-badge", "text": _('المسمّى الوظيفي وحده يحدّد الصلاحيات — كل مدير يتبع مسمّى واحدًا.')},
     {"icon": "toggle-on", "text": _('أوقف الحالة لتعطيل دخول المدير مؤقتًا دون حذف حسابه.')}
   ],
   note=_('عند التعديل، اترك حقل كلمة المرور فارغًا للإبقاء على كلمة المرور الحالية.')
@@ -57,16 +57,16 @@
         <input class="hub-input" type="text" name="full_name" value="{{ admin.full_name if admin else '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">{{ _('الدور') }}</label>
-        <select class="hub-select" name="role_id">
-          <option value="">{{ _('— بدون —') }}</option>
+        <label class="hub-field-label">{{ _('المسمّى الوظيفي') }} <span style="color:#dc2626">*</span></label>
+        <select class="hub-select" name="role_id" required>
+          <option value="">{{ _('— اختر —') }}</option>
           {% for r in roles %}
             <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
               {{ r.display_name or r.name }}
             </option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">{{ _('الدور يحدّد الصلاحيات الفعلية.') }}</div>
+        <div class="hub-field-hint">{{ _('المدير يورث صلاحيات مسمّاه الوظيفي فقط — لا صلاحيات منفردة للحساب.') }}</div>
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الحالة') }}</label>
@@ -135,11 +135,6 @@
   {% call hub.section(_('مستوى الوصول'), icon="crown") %}
     <input type="hidden" name="access_level_present" value="1">
     <div class="hub-form-row">
-      <div class="hub-field" data-testid="admin-super-user">
-        <label class="hub-field-label">{{ _('سوبر يوزر (كل الصلاحيات)') }}</label>
-        {{ toggle_switch(name="is_super_user", checked=(admin and admin_is_super_role), value="1", id="ad-super") }}
-        <div class="hub-field-hint">{{ _('يُسند دور «مدير عام»: كل الصلاحيات والمنح ورؤية كل المشتركين وإدارة المدراء والأدوار — عدا ما يخصّ المالك وحده (الإعدادات، النسخ الاحتياطيّ، الإبطال، التوكنات، تصفير البيانات، منح الشراكة).') }}</div>
-      </div>
       {% if not target_is_original_owner %}
       <div class="hub-field" data-testid="admin-co-owner">
         <label class="hub-field-label">{{ _('منح صلاحيات المالك (شريك)') }}</label>
@@ -163,9 +158,9 @@
        مدير جديد = ثقة صفر (كلاهما مُعطَّل والمبلغ 0): لا يستطيع فعل أي شيء
        يُكلّف مالًا. السوبر يرفع السقوف تدريجيًّا. مُنفَّذ خادميًّا (POST من
        غير سوبر يُردّ 403). #}
-  {% if session.get('is_super_admin') and admin %}
+  {% if (session.get('is_super_admin') or can('admins.credit_caps')) and admin %}
   {% call hub.section(_('حدود الائتمان المالي (دين/سلف)'), icon="scale-balanced",
-       meta=_('السوبر فقط — مدير جديد يبدأ بثقة صفر')) %}
+       meta=_('المالك أو من يحمل «سقوف دَين وسلفة المدراء» — مدير جديد يبدأ بثقة صفر')) %}
     <input type="hidden" name="credit_caps_present" value="1">
     <div class="hub-form-row">
       <div class="hub-field">
