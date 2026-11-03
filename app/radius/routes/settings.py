@@ -95,6 +95,10 @@ _SETTINGS_KEYS = [
     ("subscribers.create_without_expiry",
      N_("المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء"),
      _SYS_DEFAULTS["subscribers.create_without_expiry"]),
+    # قرار المالك 2026-11-03: «محفظة المشترك» تُفعَّل من هنا — معطّلة افتراضيًّا.
+    ("subscribers.wallet_enabled",
+     N_("محفظة المشترك (رصيد مسبق وخصم من الرصيد): معطّلة / مفعّلة"),
+     _SYS_DEFAULTS["subscribers.wallet_enabled"]),
     # (billing.tax_pct / auth.allow_password_reset أُزيلا — قرار المالك
     #  2026-10-06: لا قارئ لهما؛ انظر _RETIRED_KEYS أدناه.)
     # عرض الأقسام غير المصرّح بها في الواجهة (sidebar/أزرار العمليات):
@@ -345,6 +349,8 @@ def settings_page():
                     except ValueError as exc:
                         flash(str(exc), "error")
                         return redirect(url_for("radius.settings_page"))
+                if key == "subscribers.wallet_enabled":
+                    val = "1" if val == "1" else "0"
                 if key in ("device_limit.subscribers.mode", "device_limit.cards.mode"):
                     val = val.strip().lower()
                     if val not in ("reject", "replace"):
@@ -385,7 +391,7 @@ def settings_page():
     from ..services.store_key import get_store_key
     from ..core.system_config import (CREATE_WITHOUT_EXPIRY_CHOICES,
                                       CURRENCY_CHOICES, PANEL_TIMEZONES,
-                                      effective_timezone)
+                                      WALLET_CHOICES, effective_timezone)
     try:
         tz_now = effective_timezone(tenant_id)
     except Exception:  # noqa: BLE001 — المعاينة لا تُسقط الصفحة
@@ -402,4 +408,5 @@ def settings_page():
                            currency_choices=CURRENCY_CHOICES,
                            panel_timezones=PANEL_TIMEZONES,
                            create_without_expiry_choices=CREATE_WITHOUT_EXPIRY_CHOICES,
+                           wallet_choices=WALLET_CHOICES,
                            tz_now=tz_now)

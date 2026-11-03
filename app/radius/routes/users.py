@@ -17,11 +17,12 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
 from ..core.errors import RadiusError, RadiusValidationError
 from ..core.messages_ar import error_message_ar
-from ..core.system_config import default_currency
+from ..core.system_config import default_currency, wallet_enabled
 from ..core.types import Subscriber
 from ..services.accounting import service_from_context
 from ..services.plans import get_plans_service
-from ..services.users import get_users_service
+from ..services.users import (CHARGED_MODES, charge_mode_label, get_users_service,
+                              normalize_charge_mode)
 from ..services import subscriber_actions as _sa
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
 from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
@@ -2642,7 +2643,7 @@ def users_extend(username: str):
             m = int(_raw_m)
             if m <= 0:
                 return _extend_refused(N_("المدّة يجب أن تكون أكبر من صفر."))
-        charge_mode = (request.form.get("charge_mode") or "free").strip()
+        charge_mode = normalize_charge_mode(request.form.get("charge_mode"))
         amount = _form_float("amount", 0.0)
         # Spend gate (paid/debt) + extend_time/set_expiry — the SAME helper the
         # mobile API runs. A blocked manager raises SpendBlocked (a RadiusError)
@@ -2652,7 +2653,7 @@ def users_extend(username: str):
             minutes=m, expire_at=_exp, charge_mode=charge_mode, amount=amount,
             currency=(request.form.get("currency") or default_currency()).strip(),
             notes=(request.form.get("notes") or "").strip())
-        mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
+        mode_label = charge_mode_label(charge_mode)
         # المدّةُ تُعرض كما يفكّر بها المشغّل لا كما نُخزّنها: 90 دقيقة
         # تصير «ساعة ونصف» لا رقمًا يعدّه بنفسه. (الوحداتُ صارت
         # دقائق/ساعات/أيّامًا في الواجهة، فالرسالةُ بالدقائق تُربك.)
@@ -2702,7 +2703,7 @@ def users_extend_bulk():
         flash(_tr("قيمة المدّة أو تاريخ الانتهاء غير صحيحة"), "error")
         return redirect(url_for("radius.users_list"))
 
-    charge_mode = (request.form.get("charge_mode") or "free").strip()
+    charge_mode = normalize_charge_mode(request.form.get("charge_mode"))
     currency = (request.form.get("currency") or default_currency()).strip()
     notes = (request.form.get("notes") or "").strip()
     svc = get_users_service()
@@ -2713,7 +2714,7 @@ def users_extend_bulk():
     for name in usernames:
         try:
             amount = 0.0
-            if charge_mode in {"paid", "debt"}:
+            if charge_mode in CHARGED_MODES:
                 # تسعير لكل مشترك: سعره الفعلي × (المدة المضافة ÷ مدة باقته).
                 # في وضع التعيين «المدّة المضافة» = الفارقُ بين النهاية الجديدة
                 # ونهايته الفعليّة، ويختلف من مشترك لآخر — تُحسب لكلٍّ بمفرده.
@@ -2751,7 +2752,7 @@ def users_extend_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
+    mode_label = charge_mode_label(charge_mode)
     if done:
         from ..core.system_config import format_duration_days, to_local
         if expire_at is not None:
@@ -2875,7 +2876,7 @@ def users_send_credentials(username: str):
 
 def users_quota_reset_daily(username: str):
     try:
-        charge_mode = (request.form.get("charge_mode") or "free").strip()
+        charge_mode = normalize_charge_mode(request.form.get("charge_mode"))
         amount = _form_float("amount", 0.0)
         saved = get_users_service().reset_daily_quota(
             actor=_actor(),
@@ -2885,9 +2886,11 @@ def users_quota_reset_daily(username: str):
             currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
-        mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
-        if charge_mode in {"paid", "debt"}:
+        mode_label = charge_mode_label(charge_mode)
+        if charge_mode in CHARGED_MODES and wallet_enabled():
             flash(_tr('تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s. الرصيد الحالي %(v)s.', mode_label=mode_label, amount=format(amount, '.2f'), v=format(float(saved.balance or 0), '.2f')), "success")
+        elif charge_mode in CHARGED_MODES:
+            flash(_tr('تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s.', mode_label=mode_label, amount=format(amount, '.2f')), "success")
         else:
             flash(_tr("تمت استعادة الكوتة اليومية للمشترك (مجانية)."), "success")
     except RadiusError as e:
@@ -2908,7 +2911,7 @@ def users_quota_reset_daily_bulk():
     if not usernames:
         flash(_tr("لم يتم تحديد أي مشترك لاستعادة الكوتة."), "warning")
         return redirect(url_for("radius.users_list"))
-    charge_mode = (request.form.get("charge_mode") or "free").strip()
+    charge_mode = normalize_charge_mode(request.form.get("charge_mode"))
     try:
         amount = _form_float("amount", 0.0)
     except (TypeError, ValueError):
@@ -2936,7 +2939,7 @@ def users_quota_reset_daily_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
+    mode_label = charge_mode_label(charge_mode)
     if done:
         flash(_tr('تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك.', mode_label=mode_label, done=done), "success")
     if skipped:
@@ -2951,7 +2954,7 @@ def users_quota_reset_daily_bulk():
 def users_quota_topup(username: str):
     try:
         quota_mb = int(request.form.get("quota_mb") or 0)
-        charge_mode = (request.form.get("charge_mode") or "free").strip()
+        charge_mode = normalize_charge_mode(request.form.get("charge_mode"))
         amount = _form_float("amount", 0.0)
         saved = get_users_service().add_quota(
             actor=_actor(),
@@ -2963,8 +2966,11 @@ def users_quota_topup(username: str):
             currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
-        mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
-        flash(_tr('تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.', quota_mb=quota_mb, mode_label=mode_label, v=format(float(saved.balance or 0), '.2f')), "success")
+        mode_label = charge_mode_label(charge_mode)
+        if wallet_enabled():
+            flash(_tr('تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.', quota_mb=quota_mb, mode_label=mode_label, v=format(float(saved.balance or 0), '.2f')), "success")
+        else:
+            flash(_tr('تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s.', quota_mb=quota_mb, mode_label=mode_label), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
@@ -2990,7 +2996,7 @@ def users_quota_topup_bulk():
         flash(_tr("قيمة الكوتة أو المبلغ غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
     quota_target = (request.form.get("quota_target") or "combined").strip()
-    charge_mode = (request.form.get("charge_mode") or "free").strip()
+    charge_mode = normalize_charge_mode(request.form.get("charge_mode"))
     currency = default_currency()  # المحفظة بعملة النظام — لا عملة النموذج
     notes = (request.form.get("notes") or "").strip()
     svc = get_users_service()
@@ -3010,7 +3016,7 @@ def users_quota_topup_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
+    mode_label = charge_mode_label(charge_mode)
     if done:
         flash(_tr('تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s لـ %(done)s مشترك (لكلٍّ منهم).', quota_mb=quota_mb, mode_label=mode_label, done=done), "success")
     if failed:
@@ -3020,11 +3026,45 @@ def users_quota_topup_bulk():
 
 
 def users_balance_add(username: str):
+    # «تسديد دين» (purpose=debt، صفحة ماليّة المشترك) يمرّ من هنا بالصلاحيّة
+    # نفسها، لكنّ المبلغ يُقصّ إلى الدين ويعود لصفحة الماليّة. والمحفظة معطّلة
+    # ⇒ كلّ إيداعٍ تسديدُ دين: لا ينشأ رصيدٌ موجب لا يراه أحد.
+    debt_mode = (request.form.get("purpose") == "debt") or not wallet_enabled()
+    back = (url_for("radius.users_finance", username=username) if debt_mode
+            else url_for("radius.users_list"))
     try:
         amount = _form_float("amount")
     except (TypeError, ValueError):
         flash(_tr("قيمة الرصيد النقدي غير صحيحة."), "error")
-        return redirect(url_for("radius.users_list"))
+        return redirect(back)
+    if debt_mode:
+        try:
+            due = max(-float(get_users_service().get(username).balance or 0), 0.0)
+        except RadiusError as e:
+            flash(error_message_ar(e), "error")
+            return redirect(back)
+        if due <= 0:
+            flash(_tr("لا دين على هذا المشترك."), "info")
+            return redirect(back)
+        if amount > due:
+            amount = round(due, 2)
+        if amount <= 0:
+            flash(_tr("المبلغ يجب أن يكون أكبر من صفر."), "error")
+            return redirect(back)
+        try:
+            _res = _sa.add_subscriber_balance(
+                _sa.ActionCaller.from_session(), username,
+                amount=amount, currency=default_currency(),
+                notes=(request.form.get("notes") or "").strip() or _tr("تسديد دين — كاش"),
+                loan_actions=[],
+            )
+        except RadiusError as e:
+            flash(error_message_ar(e), "error")
+            return redirect(back)
+        left = max(-float(_res["subscriber"].balance or 0), 0.0)
+        flash(_tr('تم تسديد %(paid)s من الدين. المتبقّي %(left)s.',
+                  paid=format(amount, '.2f'), left=format(left, '.2f')), "success")
+        return redirect(back)
     # Spend gate → preview the settled loans → credit the wallet (net) → settle /
     # write off the chosen loans: one shared helper, also run by the mobile API.
     # A blocked manager raises SpendBlocked (a RadiusError) → flashed below.

@@ -321,6 +321,9 @@ def test_balance_add_route_settles_open_loan_and_credits_net(client, app):
     """End-to-end: POST balance/add with a «خصم» loan choice settles that loan and
     credits the wallet with the remainder (رصيد المحفظة مضاف بعد الخصومات)."""
     with app.app_context():
+        # المحفظة معطّلة افتراضيًّا (2026-11-03) — هذا الاختبار يفحصها فتُفعَّل.
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.set_setting(1, "subscribers.wallet_enabled", "1")
         plan = _seed_plan("Route Net Plan", price=100)
         _seed_subscriber(
             "route_net_case",
@@ -652,7 +655,9 @@ def test_add_time_modal_has_pricing_and_billing(client, app):
     extend_modal = html.split('data-usq-modal="extend"', 1)[1].split('data-usq-modal="sms"', 1)[0]
     assert 'name="charge_mode"' in extend_modal
     assert "data-usq-extend-amount" in extend_modal
-    assert "مدفوع — دين" in extend_modal
+    # قرار المالك 2026-11-03: دفع فوري — كاش (الافتراضيّ) / دين؛ «محفظة» مع المحفظة فقط.
+    assert 'value="cash" checked' in extend_modal
+    assert 'value="debt"' in extend_modal
 
 
 def test_plan_minutes_falls_back_to_validity_for_quota_plans(client, app):
