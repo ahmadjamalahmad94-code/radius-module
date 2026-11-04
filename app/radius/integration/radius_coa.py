@@ -495,6 +495,7 @@ def find_all_nas_for_sessions(tenant_id: int, username: str,
             "session_id": row["acctsessionid"],
             "framed_ip": row["framedipaddress"] or "",
             "calling_station_id": row["callingstationid"] or "",
+            "started_epoch": _radacct_ts_epoch(row["acctstarttime"] or ""),
         })
     return results
 
@@ -838,9 +839,28 @@ def change_user_session_timeout(tenant_id: int, username: str,
             username=username, session_id=info["session_id"],
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
-            session_timeout=int(session_timeout),
+            session_timeout=_session_timeout_from_start(
+                int(session_timeout), info.get("started_epoch")),
             port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]
     return _broadcast(N_("تحديث الوقت"), results, len(sessions))
+
+
+def _session_timeout_from_start(remaining: int, started_epoch) -> int:
+    """المتبقّي من الآن → قيمةُ Session-Timeout التي يفهمها الراوتر.
+
+    🔴 خالد نت 2026-11-04 (مقيس): مايكروتيك يعدّ Session-Timeout الواصلَ بـCoA
+    **من بداية الجلسة** (session-time-left = المهلة − uptime). بعثنا «المتبقّي»
+    فنقص من كلّ جلسةٍ عمرُها: بطاقةٌ باقٍ لها ٩٠ دقيقة وعمر جلستها ٣٢ دقيقة
+    قرأت ٥٨ دقيقة. فالقيمة = المنقضي من الجلسة + المتبقّي. بدء جلسةٍ مجهول
+    (أو في المستقبل) ⇒ المتبقّي كما هو.
+    """
+    import time as _t
+    try:
+        start = float(started_epoch or 0)
+    except (TypeError, ValueError):
+        start = 0.0
+    elapsed = int(_t.time() - start) if start > 0 else 0
+    return remaining + elapsed if elapsed > 0 else remaining
