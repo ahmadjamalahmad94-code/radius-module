@@ -1392,6 +1392,7 @@ def _card_batch_window_seconds(tenant_id, batch_id) -> int:
     try:
         row = db().execute(
             "SELECT time_value, time_unit, validity_after_first_login_days, "
+            "       validity_after_first_login_minutes, "
             "       count_by_seconds, count_from_first_connect "
             "  FROM card_batches WHERE tenant_id = ? AND id = ?",
             (int(tenant_id), int(batch_id))).fetchone()
@@ -1402,7 +1403,8 @@ def _card_batch_window_seconds(tenant_id, batch_id) -> int:
     return _card_window_seconds(row) if row else 0
 
 
-def _card_budget_session_cap(sub: Subscriber, plan: AccessPlan) -> Optional[int]:
+def _card_budget_session_cap(sub: Subscriber, plan: AccessPlan, *,
+                             usage_only: bool = False) -> Optional[int]:
     """f05-M1 — سقفُ الجلسة من **ميزانيّة البطاقة** بدل ``plan.duration_minutes``.
 
     * ``None`` → لا نعرف ميزانيّةً للبطاقة (لا صفّ بطاقة/لا مدّة): يبقى
@@ -1413,6 +1415,8 @@ def _card_budget_session_cap(sub: Subscriber, plan: AccessPlan) -> Optional[int]
       الختم، أو رصيد الاستخدام المتبقّي (الأساس + المنحة − المستهلَك) في نمط
       «بالثانية». خصمٌ استنفدها → ``1`` (لا صفر: الصفر «بلا حدّ» عند الراوتر؛
       والمُصادِق يرفضها قبل هذا أصلًا).
+
+    ``usage_only``: نمط «بالثانية» وحده — ``None`` لبطاقة النافذة.
     """
     from . import card_accounting
     try:
@@ -1446,6 +1450,8 @@ def _card_budget_session_cap(sub: Subscriber, plan: AccessPlan) -> Optional[int]
             int(sub.tenant_id), sub.username,
             since_iso=card_reset_since(_db(), int(sub.tenant_id), sub.username) or None)
         return max(1, base + extra - used)
+    if usage_only:
+        return None
     if sub.expire_at:
         return 0
     base = card_accounting.budget_seconds(
@@ -1536,6 +1542,14 @@ def _card_window_seconds(batch_row) -> int:
         unit = str(_g("time_unit") or "").strip().lower()
         if value > 0 and unit in unit_seconds:
             return value * unit_seconds[unit]
+    # 204 (خالد نت 2026-11-04): «٦ ساعات استخدام وتنتهي بعد ٨ ساعات من أوّل
+    #    دخول» — الصلاحيّة بالدقائق تَغلب الأيّام؛ الأيّامُ وحدها تجعل ٨ ساعاتٍ يومًا.
+    try:
+        minutes = int(_g("validity_after_first_login_minutes") or 0)
+    except (TypeError, ValueError):
+        minutes = 0
+    if minutes > 0:
+        return minutes * 60
     try:
         days = int(_g("validity_after_first_login_days") or 0)
     except (TypeError, ValueError):
@@ -1694,6 +1708,7 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                 _b = conn.execute("""
                     SELECT b.time_value, b.time_unit,
                            b.validity_after_first_login_days,
+                           b.validity_after_first_login_minutes,
                            b.count_by_seconds, b.count_from_first_connect,
                            COALESCE(c.extra_seconds, 0) AS extra_seconds
                       FROM cards c
@@ -1926,6 +1941,16 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             card_cap = _card_budget_session_cap(sub, plan)
             timeout = (plan.duration_minutes * 60 if card_cap is None
                        else card_cap)
+        elif not timeout and is_time_budget:
+            # 🔴 خالد نت 2026-11-03: بطاقةُ «٢٤ ساعة استخدام» (بالثانية) وصلت
+            # الراوتر بلا Session-Timeout، فلا «الوقت المتبقّي» ولا قطعٌ عند
+            # النفاد. الباقات المستورَدة مدّتُها 0 والوقتُ على الحزمة
+            # (time_value/time_unit)، والشرطُ أعلاه كان يتخطّى رصيدَ الاستخدام
+            # كلّه. هنا نمطُ «بالثانية» وحده: المتبقّي = الأساس + المنحة −
+            # المستهلَك. نمطُ النافذة يبقى على مساره أدناه كما هو.
+            usage_cap = _card_budget_session_cap(sub, plan, usage_only=True)
+            if usage_cap:
+                timeout = usage_cap
         if sub.expire_at:
             remaining = int((sub.expire_at - datetime.utcnow()).total_seconds())
             if remaining > 0:

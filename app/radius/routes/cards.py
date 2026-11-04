@@ -918,6 +918,7 @@ def _collect_batch_options() -> dict:
     validity_unit = (_form_str("quick_validity_unit") or "days").lower()
     count_by_seconds = _form_bool("count_by_seconds")
     validity_after_first_login_days = _form_int("validity_after_first_login_days")
+    validity_after_first_login_minutes = 0
     if validity_value > 0:
         validity_minutes = validity_value
         if validity_unit == "hours":
@@ -925,6 +926,9 @@ def _collect_batch_options() -> dict:
         elif validity_unit == "days":
             validity_minutes = validity_value * 1440
         validity_after_first_login_days = max(1, (validity_minutes + 1439) // 1440)
+        # 204: «٨ ساعات» تبقى ثماني ساعات — الأيّامُ المقرَّبة للعرض والتوافق فقط.
+        if validity_minutes % 1440:
+            validity_after_first_login_minutes = validity_minutes
     if count_by_seconds and validity_after_first_login_days <= 0:
         raise RadiusValidationError(_tr("عند اختيار المحاسبة بالثانية يجب تحديد صلاحية البطاقة بعد أول اتصال."))
     metadata = {
@@ -978,6 +982,7 @@ def _collect_batch_options() -> dict:
                                         (_form_str("device_limit_mode") or "").strip().lower()),
         "duration_mode":             _form_str("duration_mode") or "time_unit",
         "validity_after_first_login_days": validity_after_first_login_days,
+        "validity_after_first_login_minutes": validity_after_first_login_minutes,
         "count_by_seconds":          count_by_seconds,
         "count_from_first_connect":  _form_bool("count_from_first_connect"),
         # السلوك عند انتهاء الكوتا + خيارات
@@ -2695,6 +2700,7 @@ def _batch_window_for_display(tenant_id: int, batch_id: int) -> int:
         from ..services.policy_engine import _card_window_seconds
         _brow = db().execute(
             "SELECT time_value, time_unit, validity_after_first_login_days, "
+            "       validity_after_first_login_minutes, "
             "       count_by_seconds, count_from_first_connect "
             "  FROM card_batches WHERE tenant_id = ? AND id = ?",
             (tenant_id, batch_id)).fetchone()

@@ -206,6 +206,8 @@ def _batch_window_seconds(batch) -> int:
         "time_unit": getattr(batch, "time_unit", ""),
         "validity_after_first_login_days":
             getattr(batch, "validity_after_first_login_days", 0),
+        "validity_after_first_login_minutes":
+            getattr(batch, "validity_after_first_login_minutes", 0),
         # النمطُ جزءٌ من القاعدة لا زينة: بدونه تُختم بطاقةُ «بالثانية»
         # بساعة حائطٍ محسوبةٍ من رصيد استخدامها.
         "count_by_seconds": getattr(batch, "count_by_seconds", False),
@@ -221,6 +223,8 @@ def _batch_time_snapshot(batch) -> dict:
         "time_unit": getattr(batch, "time_unit", "") or "days",
         "validity_after_first_login_days":
             getattr(batch, "validity_after_first_login_days", 0),
+        "validity_after_first_login_minutes":
+            getattr(batch, "validity_after_first_login_minutes", 0),
         "count_by_seconds": int(bool(getattr(batch, "count_by_seconds", False))),
         "count_from_first_connect":
             int(bool(getattr(batch, "count_from_first_connect", True))),
@@ -541,6 +545,7 @@ class CardsService:
         daily_quota_mb: int = 0,
         duration_mode: str = "time_unit",
         validity_after_first_login_days: int = 0,
+        validity_after_first_login_minutes: int = 0,
         count_by_seconds: bool = False,
         count_from_first_connect: bool = True,
         on_quota_exhaust: str = "stop",
@@ -768,6 +773,7 @@ class CardsService:
             password_length=password_length, password_charset=password_charset,
             expire_at=expire,
             validity_after_first_login_days=validity_after_first_login_days,
+            validity_after_first_login_minutes=max(0, int(validity_after_first_login_minutes or 0)),
             count_by_seconds=count_by_seconds, count_from_first_connect=count_from_first_connect,
             on_quota_exhaust=on_quota_exhaust,
             switch_to_mac_on_connect=switch_to_mac_on_connect,
@@ -1897,6 +1903,7 @@ class CardsService:
             "username_length",
             "password_length",
             "validity_after_first_login_days",
+            "validity_after_first_login_minutes",
             "manager_id",
             "time_value",
             "device_count",
@@ -1964,6 +1971,7 @@ class CardsService:
         #    بطاقاتُها المبدوءةُ على ختمها القديم: الحزمةُ بنمطٍ والبطاقاتُ بآخر.
         _time_touched = any(k in changes for k in
                ("time_value", "time_unit", "validity_after_first_login_days",
+                "validity_after_first_login_minutes",
                 "count_by_seconds", "count_from_first_connect"))
         if _time_touched:
             try:

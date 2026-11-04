@@ -375,6 +375,14 @@ def _adv_card_batch_index(dataset, cu_name: str):
     vdcol = _find(cu.columns, ("val_date",))
     aflcol = _find(cu.columns, ("at_the_first_login",))
     pscol = _find(cu.columns, ("per_second",))
+    # «ينتهي بعد أوّل دخول» (exp_first_login + val_time_exp/time_cards_exp
+    # بنفس رموز val_date). 🔴 خالد نت 2026-11-03: كلّ سلاسله per_second=1
+    # وفيها هذا الانتهاء (8 ساعات استخدام وينتهي بعد 8 ساعات من أوّل دخول)؛
+    # أخذنا الاستخدام وحده فصارت البطاقات بلا نهاية — 670 بطاقة تعدّت مدّتها
+    # وما زالت تعمل. الانتهاء هو الحاكم في ADV فيُنقل «من أوّل اتصال» بمدّته.
+    efcol = _find(cu.columns, ("exp_first_login",))
+    evcol = _find(cu.columns, ("val_time_exp",))
+    eucol = _find(cu.columns, ("time_cards_exp",))
     name_map = _adv_series_name_map(dataset)
     prof = _source_profile_map(dataset)          # id → profile_name
     # مصادر احتياط للميزانية حين لا يحمل card_users الحقلين أعلاه: عمود جلسة
@@ -421,6 +429,20 @@ def _adv_card_batch_index(dataset, cu_name: str):
         # المصدر)؛ per_second=1 → بالثانية.
         cffc = _flag(r, aflcol, default=True)
         psec = _flag(r, pscol, default=False)
+        vmin = 0
+        if _flag(r, efcol, default=False):
+            ev, eu = _card_users_budget(r, evcol, eucol)
+            if eu:
+                # 🔴 2026-11-04 (صاحب الشبكة): «بالثانية» في ADV = رصيدُ استخدامٍ
+                #    **و**صلاحيّةٌ تبدأ عند أوّل دخول؛ تنتهي بأوّلهما (٦ ساعات
+                #    استخدام / ٨ ساعات صلاحيّة). رصيدٌ أقصر من الصلاحيّة ⇒ «بالثانية»
+                #    بصلاحيّةٍ بالدقائق؛ وإلّا فالصلاحيّة وحدها تحكم ⇒ «من أوّل اتصال».
+                usage_s = _UNIT_SECS.get(tu, 0) * int(tv or 0)
+                exp_s = _UNIT_SECS[eu] * int(ev)
+                if psec and 0 < usage_s < exp_s:
+                    cffc, vmin = False, exp_s // 60
+                else:
+                    tv, tu, cffc, psec = ev, eu, True, False
         # 🔴 اسمٌ واحدٌ لسلسلتين بمدّتين مختلفتين ⇒ **لا يُدمجان**.
         #    الاسمُ ليس مفتاحًا في المصدر: عند «عبد أبو هاشم» حملت
         #    «Top Net» سلسلتين — 3383 بعشر ساعاتٍ (100 بطاقة) و3439
@@ -429,9 +451,9 @@ def _adv_card_batch_index(dataset, cu_name: str):
         #    لا يظهر إلّا في فاتورةِ من يعُدّ. (بلاغ 2026-08-26.)
         #    فالثانيةُ تُميَّز بلاحقة «year-num» وتبقى حزمةً مستقلّة.
         prev = _seen_budget.get(nm)
-        if prev is not None and prev != (tv, tu):
+        if prev is not None and prev != (tv, tu, vmin):
             nm = f"{nm} ({y}-{ns})" if (y or ns) else f"{nm} ({cid})"
-        _seen_budget.setdefault(nm, (tv, tu))
+        _seen_budget.setdefault(nm, (tv, tu, vmin))
 
         batches.append({
             "_cu_id": cid, "name": nm, "plan": prof.get(pid, ""),
@@ -441,6 +463,7 @@ def _adv_card_batch_index(dataset, cu_name: str):
             "time_value": tv, "time_unit": tu,
             "count_from_first_connect": cffc,
             "count_by_seconds": psec,
+            "validity_after_first_login_minutes": vmin,
             "year": y, "num_ser": ns})
         by_id[cid] = nm
     return batches, by_id
@@ -451,6 +474,7 @@ def _adv_card_batch_index(dataset, cu_name: str):
 # 10,3؛ ساعة 90,3=90د؛ اوتو نص ساعة 30,3). 1=أيام (اصطلاح adv). رمز مجهول →
 # بلا ميزانية (لا نُخمّن مدّة خاطئة أبدًا).
 _VAL_DATE_UNITS = {"1": "days", "2": "hours", "3": "minutes"}
+_UNIT_SECS = {"days": 86400, "hours": 3600, "minutes": 60}
 
 
 def _card_users_budget(row, decol: str, vdcol: str) -> tuple[int, str]:
@@ -505,6 +529,8 @@ def _build_adv_card_users_batches(dataset: SourceDataset,
         fields["count_from_first_connect"] = bool(
             b.get("count_from_first_connect", True))
         fields["count_by_seconds"] = bool(b.get("count_by_seconds", False))
+        fields["validity_after_first_login_minutes"] = int(
+            b.get("validity_after_first_login_minutes", 0) or 0)
         fields["_series"] = f'{b.get("year", "")}-{b.get("num_ser", "")}'
         out.append(Candidate(section=match.section, natural_key=norm_key(b["name"]),
                              fields=fields, source_ref=b["name"]))

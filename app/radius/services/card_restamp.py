@@ -76,7 +76,7 @@ _DRIFT_TOLERANCE_SEC = 60
 #: batch fields whose change can move a started card's window.
 BATCH_TIME_FIELDS = (
     "time_value", "time_unit", "validity_after_first_login_days",
-    "count_by_seconds", "count_from_first_connect", "plan_id",
+    "validity_after_first_login_minutes", "count_by_seconds", "count_from_first_connect", "plan_id",
 )
 
 
@@ -185,6 +185,7 @@ def _restamp(tenant_id: int, *, batch_id, plan_id, previous_batch,
             "SELECT c.id, c.username, c.first_used_at, c.expire_at, "
             "       COALESCE(c.extra_seconds, 0) AS extra_seconds, "
             "       b.time_value, b.time_unit, b.validity_after_first_login_days, "
+            "       b.validity_after_first_login_minutes, "
             "       b.count_by_seconds, b.count_from_first_connect, "
             "       COALESCE(b.auto_renew_after_first_use, 0) AS auto_renew, "
             "       p.duration_minutes, p.validity_days "

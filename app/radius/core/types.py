@@ -346,6 +346,8 @@ class CardBatch:
     # صلاحية
     expire_at: Optional[datetime] = None
     validity_after_first_login_days: int = 0
+    # 204: صلاحيّة «بعد أوّل دخول» بالدقائق — تَغلب الأيّام متى > 0 (نمط «بالثانية»)
+    validity_after_first_login_minutes: int = 0
     # تشغيل
     count_by_seconds: bool = False
     count_from_first_connect: bool = True

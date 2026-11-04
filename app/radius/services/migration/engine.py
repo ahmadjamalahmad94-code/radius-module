@@ -572,6 +572,8 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     time_unit = str(c.fields.get("time_unit") or "days").strip() or "days"
     count_from_first = bool(c.fields.get("count_from_first_connect", True))
     count_by_secs = bool(c.fields.get("count_by_seconds", False))
+    # 204: صلاحيّة «بالثانية» بالدقائق (سلاسل ADV «٦ س استخدام / ٨ س صلاحيّة»).
+    validity_minutes = _to_int(c.fields.get("validity_after_first_login_minutes")) or 0
     # هل يحمل هذا المرشّح بيانات احتساب مصدريّة أصلًا؟ (باني adv فقط يضعها؛
     # مصادر أخرى لا — فلا نَدوس حزمة قائمة بقيَم افتراضيّة).
     _has_accounting = ("count_from_first_connect" in c.fields
@@ -586,8 +588,10 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
         if mode != "skip" and not dry_run and _has_accounting:
             try:
                 from ...db.connection import transaction
-                sets = ["count_from_first_connect=?", "count_by_seconds=?"]
-                vals: list = [int(count_from_first), int(count_by_secs)]
+                sets = ["count_from_first_connect=?", "count_by_seconds=?",
+                        "validity_after_first_login_minutes=?"]
+                vals: list = [int(count_from_first), int(count_by_secs),
+                              validity_minutes]
                 if c.fields.get("time_value") is not None:
                     sets += ["time_value=?", "time_unit=?"]
                     vals += [time_value, time_unit]
@@ -626,6 +630,7 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
                       count_from_first_connect=count_from_first,
                       count_by_seconds=count_by_secs,
                       time_value=time_value, time_unit=time_unit,
+                      validity_after_first_login_minutes=validity_minutes,
                       source_type="imported", notes=notes)
     saved = cards_repo.create_batch(batch)
     idmap[SEC_BATCHES][c.natural_key] = int(saved.id)

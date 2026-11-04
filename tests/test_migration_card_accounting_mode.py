@@ -259,3 +259,51 @@ def test_real_shape_per_second_maps_by_seconds_mode():
     c = _batch_candidates(ds)[norm_key("2026-1")]   # name = year-num (no rep_cards)
     assert c.fields.get("count_from_first_connect") is False
     assert c.fields.get("count_by_seconds") is True
+
+
+def _adv_series(usage, usage_unit, exp, exp_unit, *, per_second="1", exp_flag="1"):
+    return SourceDataset(fmt="sql_dump", tables=[SourceTable(
+        name="card_users",
+        columns=["id", "year", "num_ser", "profile", "date_end_card",
+                 "val_date", "at_the_first_login", "per_second",
+                 "exp_first_login", "val_time_exp", "time_cards_exp"],
+        rows=[{"id": "1", "year": "2026", "num_ser": "1", "profile": "1",
+               "date_end_card": usage, "val_date": usage_unit,
+               "at_the_first_login": "0", "per_second": per_second,
+               "exp_first_login": exp_flag, "val_time_exp": exp,
+               "time_cards_exp": exp_unit}])])
+
+
+def test_real_shape_usage_shorter_than_expiry_is_by_seconds_with_hour_window():
+    # صاحب شبكة خالد نت 2026-11-04: «٦ ساعات استخدام» + «تنتهي بعد ٨ ساعات من
+    # أوّل دخول» — تنتهي بأوّلهما. رصيدُ استخدامٍ ٦ س وصلاحيّةٌ ٤٨٠ دقيقة.
+    c = _batch_candidates(_adv_series("6", "2", "8", "2"))[norm_key("2026-1")]
+    assert (c.fields.get("time_value"), c.fields.get("time_unit")) == (6, "hours")
+    assert c.fields.get("count_by_seconds") is True
+    assert c.fields.get("count_from_first_connect") is False
+    assert c.fields.get("validity_after_first_login_minutes") == 480
+
+
+def test_real_shape_usage_equal_to_expiry_is_from_first_connect():
+    # ٨ س استخدام / ٨ س صلاحيّة: الصلاحيّة وحدها تحكم ⇒ من أوّل اتصال ٨ ساعات.
+    c = _batch_candidates(_adv_series("8", "2", "8", "2"))[norm_key("2026-1")]
+    assert (c.fields.get("time_value"), c.fields.get("time_unit")) == (8, "hours")
+    assert c.fields.get("count_from_first_connect") is True
+    assert c.fields.get("count_by_seconds") is False
+    assert c.fields.get("validity_after_first_login_minutes") == 0
+
+
+def test_real_shape_expiry_flag_off_keeps_per_second():
+    ds = SourceDataset(fmt="sql_dump", tables=[SourceTable(
+        name="card_users",
+        columns=["id", "year", "num_ser", "profile", "date_end_card",
+                 "val_date", "at_the_first_login", "per_second",
+                 "exp_first_login", "val_time_exp", "time_cards_exp"],
+        rows=[{"id": "1", "year": "2026", "num_ser": "1", "profile": "1",
+               "date_end_card": "60", "val_date": "3",
+               "at_the_first_login": "0", "per_second": "1",
+               "exp_first_login": "0", "val_time_exp": "8",
+               "time_cards_exp": "2"}])])
+    c = _batch_candidates(ds)[norm_key("2026-1")]
+    assert (c.fields.get("time_value"), c.fields.get("time_unit")) == (60, "minutes")
+    assert c.fields.get("count_by_seconds") is True

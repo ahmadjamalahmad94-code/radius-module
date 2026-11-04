@@ -38,6 +38,7 @@ def _batch_row(r) -> CardBatch:
         password_charset=r["password_charset"] or "digits",
         expire_at=parse_dt(r["expire_at"]),
         validity_after_first_login_days=r["validity_after_first_login_days"] or 0,
+        validity_after_first_login_minutes=int(_g(r, "validity_after_first_login_minutes", 0) or 0),
         count_by_seconds=bool(r["count_by_seconds"]),
         count_from_first_connect=bool(r["count_from_first_connect"]),
         on_quota_exhaust=r["on_quota_exhaust"] or "stop",
@@ -644,9 +645,9 @@ def _insert_batch_row(conn: sqlite3.Connection, b: CardBatch, code: str) -> int:
             time_value, time_unit, device_count, device_limit_mode, duration_mode,
             auto_renew_after_first_use, transfer_to_student_status_on_connect,
             close_user_session_on_disconnect, allow_entry_by_previous_card_palestine,
-            total_price, metadata)
+            total_price, metadata, validity_after_first_login_minutes)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
-               ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+               ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (b.tenant_id, code, b.package_name, b.plan_id, b.count, 0, 0,
           b.price_per_card, b.price_bulk, b.total_quota_mb,
           b.username_prefix, b.username_suffix, b.username_length,
@@ -663,7 +664,8 @@ def _insert_batch_row(conn: sqlite3.Connection, b: CardBatch, code: str) -> int:
           b.time_value, b.time_unit, b.device_count, b.device_limit_mode, b.duration_mode,
           int(b.auto_renew_after_first_use), int(b.transfer_to_student_status_on_connect),
           int(b.close_user_session_on_disconnect), int(b.allow_entry_by_previous_card_palestine),
-          b.total_price, b.metadata or "{}"))
+          b.total_price, b.metadata or "{}",
+          int(getattr(b, "validity_after_first_login_minutes", 0) or 0)))
     new_id = int(cur.lastrowid)
     original_count = int(getattr(b, "original_count", 0) or b.count or 0)
     settlement_count = int(getattr(b, "settlement_count", 0) or original_count)
@@ -835,6 +837,7 @@ _MUTABLE_BATCH_FIELDS = {
     "password_charset",
     "expire_at",
     "validity_after_first_login_days",
+    "validity_after_first_login_minutes",
     "count_by_seconds",
     "count_from_first_connect",
     "on_quota_exhaust",
